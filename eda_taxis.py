@@ -2,12 +2,12 @@
 eda_taxis.py
 ============
 Análisis Exploratorio de Datos (EDA) sobre el dataset
-"NYC Yellow Taxi Trip Records" (Enero 2024).
+"NYC Yellow Taxi Trip Records" (Marzo 2026).
 
 Fuente oficial:
     https://www.nyc.gov/site/tlc/about/tlc-trip-record-data.page
 URL directa (Parquet):
-    https://d37ci6vzurychx.cloudfront.net/trip-data/yellow_tripdata_2024-01.parquet
+    https://d37ci6vzurychx.cloudfront.net/trip-data/yellow_tripdata_2026-03.parquet
 
 El script:
     1. Intenta descargar el Parquet oficial (si hay conectividad).
@@ -40,10 +40,10 @@ import seaborn as sns
 # Configuración
 # ---------------------------------------------------------------------------
 DATA_URL = (
-    "https://d37ci6vzurychx.cloudfront.net/trip-data/yellow_tripdata_2024-01.parquet"
+    "https://d37ci6vzurychx.cloudfront.net/trip-data/yellow_tripdata_2026-03.parquet"
 )
 ZONES_URL = "https://d37ci6vzurychx.cloudfront.net/misc/taxi_zone_lookup.csv"
-LOCAL_PARQUET = Path("yellow_tripdata_2024-01.parquet")
+LOCAL_PARQUET = Path("yellow_tripdata_2026-03.parquet")
 LOCAL_ZONES = Path("taxi_zone_lookup.csv")
 ASSETS_DIR = Path("assets")
 SAMPLE_SIZE = 100_000
@@ -72,13 +72,13 @@ def download_real_parquet(url: str, dest: Path, timeout: int = 30) -> bool:
 def synthesize_yellow_taxi_sample(n: int = SAMPLE_SIZE, seed: int = RANDOM_STATE) -> pd.DataFrame:
     """
     Genera una muestra sintética que reproduce el esquema oficial de la TLC
-    (Yellow Taxi - Enero 2024) con distribuciones realistas. Se utiliza como
+    (Yellow Taxi - Marzo 2026) con distribuciones realistas. Se utiliza como
     fallback cuando no hay conectividad para descargar el archivo real.
     """
     rng = np.random.default_rng(seed)
 
-    # Pickup datetimes distribuidos en Enero 2024, con sesgo a horas pico
-    base = pd.Timestamp("2024-01-01")
+    # Pickup datetimes distribuidos en Marzo 2026, con sesgo a horas pico
+    base = pd.Timestamp("2026-03-01")
     minutes_in_jan = 31 * 24 * 60
     pickup_minutes = rng.integers(0, minutes_in_jan, size=n)
     pickup = base + pd.to_timedelta(pickup_minutes, unit="m")
@@ -208,9 +208,9 @@ def basic_overview(df: pd.DataFrame) -> dict:
         "passenger_count == 0 o NaN": int(
             df["passenger_count"].fillna(0).eq(0).sum()
         ),
-        "pickup fuera de Enero 2024": int(
+        "pickup fuera de Marzo 2026": int(
             (~df["tpep_pickup_datetime"].between(
-                "2024-01-01", "2024-01-31 23:59:59")
+                "2026-03-01", "2026-03-31 23:59:59")
              ).sum()
         ),
     }
@@ -358,7 +358,7 @@ def plot_trip_distance(df: pd.DataFrame, out: Path) -> None:
     fig, ax = plt.subplots(figsize=(10, 5))
     data = df.loc[df["trip_distance"].between(0, 20), "trip_distance"]
     sns.histplot(data, bins=60, kde=True, color="#1f77b4", ax=ax)
-    ax.set_title("Distribución de la distancia de viaje (NYC Yellow Taxi - Ene 2024)")
+    ax.set_title("Distribución de la distancia de viaje (NYC Yellow Taxi - Mar 2026)")
     ax.set_xlabel("Distancia (millas)")
     ax.set_ylabel("Frecuencia")
     fig.tight_layout()
