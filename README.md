@@ -4,8 +4,16 @@
 Uso de taxis Yellow Cab en USA — *NYC TLC Yellow Taxi Trip Records*
 
 El trabajo consiste en EDA, visualización, planteo de un problema de ML supervisado y preparación
-del dataset (no requiere entrenar el modelo). El análisis principal está en
-[`tp_grupal_eda.ipynb`](tp_grupal_eda.ipynb).
+del dataset (no requiere entrenar el modelo).
+
+- **Plan A (principal):** [`tp_grupal_eda_planA_propina.ipynb`](tp_grupal_eda_planA_propina.ipynb) —
+  predecir la **propina** como proporción de la tarifa (`tip_pct = tip_amount / fare_amount`),
+  restringido a pagos con tarjeta.
+- **Plan B (respaldo):** [`tp_grupal_eda_planB_duracion.ipynb`](tp_grupal_eda_planB_duracion.ipynb) —
+  predecir la **duración** del viaje (`duration_min`). Mismo EDA, distinto target.
+
+Ambos comparten el mismo análisis exploratorio (secciones 1–2) y se diferencian en el planteo del
+problema y el preprocesamiento (secciones 3–4).
 
 ---
 
@@ -50,7 +58,8 @@ hay que descargar nada.
 ```bash
 uv run jupyter lab
 ```
-Se abre Jupyter en el navegador → abrí **`tp_grupal_eda.ipynb`** → *Run All*. ✅
+Se abre Jupyter en el navegador → abrí **`tp_grupal_eda_planA_propina.ipynb`** → *Run All*. ✅
+(o el de Plan B; ambos corren end-to-end).
 
 ---
 
@@ -73,7 +82,8 @@ Se abre Jupyter en el navegador → abrí **`tp_grupal_eda.ipynb`** → *Run All
 
 ```
 ceia_add/
-├── tp_grupal_eda.ipynb     # análisis principal (EDA + viz + problema ML + preprocesamiento)
+├── tp_grupal_eda_planA_propina.ipynb   # Plan A: predecir propina (tip_pct)  [principal]
+├── tp_grupal_eda_planB_duracion.ipynb  # Plan B: predecir duración (respaldo)
 ├── dataset/                # datos versionados (parquet de viajes + lookup de zonas)
 ├── data_dictionary_trip_records_yellow.pdf
 ├── pyproject.toml          # dependencias
