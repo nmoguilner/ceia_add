@@ -48,12 +48,16 @@
 
 ## 5. PENDIENTES / decisiones abiertas
 
-1. **Q1 y Q2 SIN responder.** Pertenecen a un `LabelEncoder` **propio** (con `self.names`, `class_to_name`, `transform` por comprehension + `reshape`). La versión del **repo usa el `LabelEncoder` de sklearn**, que NO tiene esas preguntas — por eso el notebook actual no las incluye. **Acción:** Gus debe pasar la celda del `LabelEncoder` de su versión de campus; con eso se responden y se agregan al notebook. (Sus borradores de Q1/Q2 ya estaban conceptualmente bien.)
+1. **Q1 y Q2 → RESUELTO: no existen en el TP oficial.** El notebook de entrega real
+   (`~/Downloads/AMIA_2025_TP1 (2).ipynb`) usa el `LabelEncoder` de **sklearn** y solo trae
+   **Q3–Q7** + la Consigna QDA (P1–P13). Las Q1/Q2 que aparecieron antes eran de otra
+   versión/cohorte (con encoder propio) y NO aplican. `tp_resuelto.ipynb` ya cubre el 100%.
 
-2. **Definir qué versión se entrega:**
-   - (a) `tp_resuelto.ipynb` (repo, sklearn) → habría que agregarle el `LabelEncoder` custom + Q1/Q2, **o**
-   - (b) el **mono-notebook del campus** (con encoder propio) → portar a él todo lo que se hizo acá.
-   - Sin decidir.
+2. **Formato de entrega → RESUELTO.** Se eligió el mono-notebook self-contained.
+   **`AMIA_2025_TP1_resuelto.ipynb`** (en `~/projects/ceia-amia-tp/`) = material provisto intacto
+   (teoría + código base + consigna) + sección "RESOLUCIÓN" con las 4 clases **inline**, Q3–Q7,
+   P1–P13, benchmarks, CV y conclusiones. Ejecutado, 0 errores. **Es el entregable final.**
+   (`tp_resuelto.ipynb`, versión repo que importa de `base/`, queda como respaldo.)
 
 3. **Mail al profesor (avance/estado):** texto redactado (ver abajo) pero **no enviado**. Faltan: dirección del profesor y su nombre. ⚠️ El conector de Gmail disponible **solo crea borradores, no envía** → quedaría en Drafts para enviar a mano.
 
