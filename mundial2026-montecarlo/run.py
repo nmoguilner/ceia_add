@@ -35,11 +35,12 @@ def main():
     champs = [r for r in results if r["titles"] > 0]
     print(f"\nResultado sobre {n:,} torneos simulados — "
           f"{len(champs)} selecciones salieron campeonas al menos una vez.\n")
-    print(f"{'#':>2}  {'Seleccion':<24}{'ELO':>7}  {'Titulos':>8}  {'P(campeon)':>11}  {'P(final)':>9}")
-    print("-" * 70)
+    print(f"{'#':>2}  {'Seleccion':<24}{'ELO':>7}  {'Titulos':>9}  "
+          f"{'P(campeon)':>11}  {'P(final)':>9}  {'P(semi)':>8}")
+    print("-" * 80)
     for i, r in enumerate(results[:args.top], 1):
-        print(f"{i:>2}  {r['team']:<24}{r['elo']:>7.0f}  {r['titles']:>8,}  "
-              f"{r['p_champion']*100:>10.2f}%  {r['p_final']*100:>8.1f}%")
+        print(f"{i:>2}  {r['team']:<24}{r['elo']:>7.0f}  {r['titles']:>9,}  "
+              f"{r['p_champion']*100:>10.2f}%  {r['p_final']*100:>8.1f}%  {r['p_semi']*100:>7.1f}%")
 
     tail = [r for r in results[args.top:] if r["titles"] > 0]
     if tail:
@@ -49,7 +50,8 @@ def main():
 
     if args.out:
         with open(args.out, "w", newline="", encoding="utf-8") as f:
-            w = csv.DictWriter(f, fieldnames=["team", "elo", "titles", "p_champion", "finals", "p_final"])
+            w = csv.DictWriter(f, fieldnames=["team", "elo", "titles", "p_champion",
+                                              "finals", "p_final", "semis", "p_semi"])
             w.writeheader()
             w.writerows(results)
         print(f"\nResultados completos escritos en {args.out}", file=sys.stderr)

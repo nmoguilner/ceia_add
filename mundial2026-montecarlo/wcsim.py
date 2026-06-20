@@ -262,10 +262,17 @@ def simulate_knockout(standings, best_thirds, bracket, model, rng):
         b = winners[node["b"]]
         winners[node["match"]] = model.play_knockout(a, b, rng)
 
-    final_match = bracket["tree"][-1]
-    champion = winners[final_match["match"]]
-    finalists = (winners[final_match["a"]], winners[final_match["b"]])
-    return champion, finalists
+    tree = bracket["tree"]
+    by_match = {node["match"]: node for node in tree}
+    final_node = tree[-1]                       # M103
+    sf1 = by_match[final_node["a"]]             # M101
+    sf2 = by_match[final_node["b"]]             # M102
+    champion = winners[final_node["match"]]
+    finalists = (winners[final_node["a"]], winners[final_node["b"]])
+    # Semifinalistas = los 4 que entran a las dos semis (ganadores de los cuartos)
+    semifinalists = (winners[sf1["a"]], winners[sf1["b"]],
+                     winners[sf2["a"]], winners[sf2["b"]])
+    return champion, finalists, semifinalists
 
 
 # ---------------------------------------------------------------------------
@@ -280,15 +287,18 @@ def run(n=20000, seed=None, base=1.35, home_adv=60.0, data_base=None, progress=N
     all_teams = list(data["elo"].keys())
     champ = {t: 0 for t in all_teams}
     final = {t: 0 for t in all_teams}
+    semi = {t: 0 for t in all_teams}
 
     for i in range(n):
         standings, best_thirds = simulate_group_stage(
             data["groups"], data["fixtures"], model, rng)
-        champion, finalists = simulate_knockout(
+        champion, finalists, semifinalists = simulate_knockout(
             standings, best_thirds, data["bracket"], model, rng)
         champ[champion] += 1
         for f in finalists:
             final[f] += 1
+        for s in semifinalists:
+            semi[s] += 1
         if progress and (i + 1) % progress == 0:
             print(f"  ... {i + 1}/{n} simulaciones", flush=True)
 
@@ -301,6 +311,8 @@ def run(n=20000, seed=None, base=1.35, home_adv=60.0, data_base=None, progress=N
             "p_champion": champ[t] / n,
             "finals": final[t],
             "p_final": final[t] / n,
+            "semis": semi[t],
+            "p_semi": semi[t] / n,
         })
     results.sort(key=lambda r: r["titles"], reverse=True)
     return results, n

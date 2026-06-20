@@ -81,23 +81,25 @@ bracket de [worldcuppass.com](https://worldcuppass.com/world-cup-2026-round-of-3
 
 ---
 
-## Resultado (100.000 escenarios, `--seed 2026`)
+## Resultado (1.000.000 de escenarios, `--seed 2026`)
 
-| # | Selección | ELO | P(campeón) | P(final) |
-|---|-----------|-----|-----------:|---------:|
-| 1 | Argentina | 1889 | **28.5 %** | 46.5 % |
-| 2 | France | 1887 | **25.1 %** | 42.2 % |
-| 3 | Spain | 1856 | **14.0 %** | 26.0 % |
-| 4 | England | 1848 | **12.0 %** | 23.6 % |
-| 5 | USA | 1710 | 3.8 % | 10.3 % |
-| 6 | Mexico | 1722 | 3.0 % | 8.0 % |
-| 7 | Brazil | 1772 | 2.7 % | 7.4 % |
-| 8 | Morocco | 1770 | 2.7 % | 7.4 % |
-| 9 | Portugal | 1755 | 1.9 % | 5.9 % |
-| 10 | Netherlands | 1764 | 1.9 % | 5.2 % |
+| # | Selección | ELO | P(campeón) | P(final) | P(semi) |
+|---|-----------|-----|-----------:|---------:|--------:|
+| 1 | Argentina | 1889 | **28.3 %** | 46.4 % | 67.5 % |
+| 2 | France | 1887 | **25.0 %** | 42.2 % | 62.3 % |
+| 3 | Spain | 1856 | **14.1 %** | 26.2 % | 47.5 % |
+| 4 | England | 1848 | **12.1 %** | 23.4 % | 44.6 % |
+| 5 | USA | 1710 | 3.7 % | 10.2 % | 27.4 % |
+| 6 | Mexico | 1722 | 3.1 % | 8.1 % | 20.3 % |
+| 7 | Brazil | 1772 | 2.7 % | 7.5 % | 18.4 % |
+| 8 | Morocco | 1770 | 2.7 % | 7.4 % | 18.7 % |
+| 9 | Portugal | 1755 | 2.0 % | 6.0 % | 15.5 % |
+| 10 | Netherlands | 1764 | 1.8 % | 5.2 % | 12.9 % |
 
-En total **29 selecciones** salieron campeonas en al menos un escenario. El detalle
-completo de las 48 está en [`resultados_100k.csv`](resultados_100k.csv).
+En total **35 selecciones** salieron campeonas en al menos un escenario. El detalle
+completo de las 48 (campeón / final / semi) está en [`resultados_1M.csv`](resultados_1M.csv).
+La columna `P(semi)` deja a la vista que la **grilla de eliminatorias completa** (Ronda de
+32 → octavos → cuartos → semi → final) entra en el cómputo, no solo la final.
 
 > USA y México aparecen por encima de su ELO puro por la **ventaja de localía** y por
 > estar ya primeros de grupo (llave más favorable en la Ronda de 32).
