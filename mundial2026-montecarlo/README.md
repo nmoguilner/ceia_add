@@ -106,11 +106,13 @@ La columna `P(semi)` deja a la vista que la **grilla de eliminatorias completa**
 
 ---
 
-## Notebook (`mundial2026.ipynb`)
+## Notebook / paper (`mundial2026.ipynb`)
 
-[`mundial2026.ipynb`](mundial2026.ipynb) explica paso a paso la **lógica del ELO**, la
-**lógica de la simulación** (modelo de partido, fase de grupos y grilla de eliminatorias),
-corre **1.000.000 de escenarios** y produce los gráficos. Para abrirlo:
+[`mundial2026.ipynb`](mundial2026.ipynb) está redactado como un **paper académico**: resumen,
+introducción, datos, metodología formal (ELO, modelo Poisson, estructura del torneo y
+**estimador de Monte Carlo con error estándar e intervalos de confianza**), resultados con
+**análisis de convergencia** y **de sensibilidad**, discusión, conclusiones y referencias.
+Corre **1.000.000 de escenarios** y produce las figuras. Para abrirlo:
 
 ```bash
 uv sync --extra notebook         # instala matplotlib/pandas/jupyter (solo para el notebook)
@@ -118,15 +120,16 @@ uv run --extra notebook jupyter lab mundial2026.ipynb
 ```
 
 > El **motor** (`wcsim.py`) sigue siendo stdlib puro; estas dependencias son solo para la
-> presentación. Para regenerar el notebook desde cero: `uv run --extra notebook python _build_notebook.py`.
+> presentación. El entorno queda fijado en `uv.lock`. Para regenerar el notebook desde cero:
+> `uv run --extra notebook python _build_notebook.py`.
 
-### Gráficos
+### Figuras
 
-![Probabilidad de salir campeón (top 15)](charts/03_campeon_top15.png)
+![Probabilidad de campeonato top-15 con IC 95%](charts/03_campeon_top15.png)
 
 ![Avance por la grilla de eliminatorias](charts/04_avance_grilla.png)
 
-![ELO vs probabilidad de campeón](charts/05_elo_vs_campeon.png)
+![Convergencia del estimador de Monte Carlo](charts/06_convergencia.png)
 
 ---
 
