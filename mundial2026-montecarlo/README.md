@@ -178,6 +178,33 @@ pelotón medio (USA, Brasil, Marruecos, México) subiendo. La dirección coincid
 
 ![Efecto de la calibración sobre P(campeón)](charts/10_mle_vs_amano.png)
 
+### Apéndice C — ELO pre-partido reconstruido (calibración sin proxy)
+
+El Apéndice B usó el ELO actual como proxy. Acá se **elimina el proxy**: [`elo_history.py`](elo_history.py)
+reconstruye el ELO al momento de cada partido corriendo el algoritmo oficial eloratings
+(`R' = R + K·G·(W−We)`) sobre los 49.437 partidos del histórico, y recalibra sobre la diferencia
+de ELO **pre-partido** (3.630 partidos, todas las selecciones).
+
+```bash
+uv run --extra notebook python elo_history.py   # -> data/elo_reconstructed.csv + calibration_prematch.json
+```
+
+| Parámetro | A mano | Proxy (B) | **Pre-partido (C)** |
+|---|---:|---:|---:|
+| escala | 800 | 1281 | **1306** |
+| h (localía) | 60 | 86.7 | **127** |
+| β₁ ± IC95 | — | ±0.00034 | **±0.00007** |
+
+**Hallazgo:** la reconstrucción se valida fuerte contra worldfootballrankings (**r = 0.92**), y al
+quitar el proxy **la escala no cambia** (~1306 vs 1281) pero el IC de β₁ se angosta ~5×. O sea: la
+dilución de regresión que temíamos era **menor**, y la escala plana —la compresión de las
+favoritas— es **robusta, no un artefacto del proxy**. El único cambio material es una localía
+estimada mayor (h≈127) que eleva a USA como anfitrión (~12 %).
+
+![Validación del ELO reconstruido (r=0.92)](charts/11_elo_reconstruido.png)
+
+![Las tres calibraciones](charts/12_calibraciones.png)
+
 ---
 
 ## Limitaciones / supuestos

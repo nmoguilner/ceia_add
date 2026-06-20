@@ -439,10 +439,11 @@ y la grilla eliminatoria oficial completa. Sobre $10^{6}$ réplicas, **Argentina
 principales candidatas, con errores de Monte Carlo despreciables y un ordenamiento robusto a la
 ventaja de localía. El marco es transparente, reproducible y fácilmente actualizable a medida
 que avanza el torneo (basta editar `groups.csv` y `fixtures.csv`). Una calibración por máxima
-verosimilitud sobre datos históricos (**Apéndice B**) sugiere que estas cifras **sobreestiman a
-las favoritas**: con parámetros estimados de los datos, el modelo es más plano y competitivo
-(Argentina $\approx 20\%$). La continuación natural es reconstruir el Elo pre-partido histórico
-para eliminar el proxy de la calibración e incorporar la dependencia de Dixon–Coles.""")
+verosimilitud sobre datos históricos (**Apéndices B y C**) indica que estas cifras **sobreestiman
+a las favoritas**: con parámetros estimados de los datos —y un Elo pre-partido reconstruido que
+elimina el proxy— el modelo es más plano y competitivo (Argentina $\approx 19{-}20\%$), con la
+escala estimada robusta entre ambas calibraciones. La extensión restante es incorporar la
+dependencia de marcadores bajos de Dixon–Coles.""")
 
 # ===========================================================================
 # Apendice A — modelo de goles con total acotado
@@ -586,8 +587,84 @@ el baseline **sobreestima el dominio de los favoritos**. Al re-correr con el mod
 probabilidad de título de las grandes cae con fuerza (Argentina $\approx 28{,}6\% \to 20\%$,
 Francia $\approx 25{,}7\% \to 19\%$) y se redistribuye al pelotón medio; USA sube además por la
 localía estimada ($h\approx 87$). La **dirección** confirma el Apéndice A con datos reales; la
-**magnitud** debe leerse con cautela por la dilución del proxy. Reconstruir el Elo pre-partido
-histórico —evitando el proxy— es la continuación natural de este trabajo.""")
+**magnitud** debe leerse con cautela por la dilución del proxy —que el **Apéndice C** elimina
+reconstruyendo el Elo pre-partido histórico.""")
+
+# ===========================================================================
+# Apendice C — reconstruccion del ELO pre-partido
+# ===========================================================================
+md(r"""## Apéndice C. Reconstrucción del ELO pre-partido (calibración sin proxy)
+
+El Apéndice B calibró usando el Elo *actual* como proxy de la fuerza pasada, con la sospecha de
+que la dilución de regresión atenuaba $\beta_1$. Aquí se **elimina el proxy**: se reconstruye el
+Elo al momento de cada partido corriendo el algoritmo oficial de los *World Football Elo Ratings*
+
+$$R' = R + K\,G\,(W - W_e), \qquad W_e = \frac{1}{1+10^{-(R_{\text{loc}}+100\cdot\text{local}-R_{\text{vis}})/400}},$$
+
+con $K$ según la importancia del torneo (60 Mundial, 50 finales continentales, 40
+clasificatorias/Nations League, 30 otros, 20 amistosos) y $G$ según el margen de gol, sobre los
+$49\,437$ partidos del histórico [14]. Luego se reajusta la regresión de Poisson sobre la
+**diferencia de Elo pre-partido** (script `elo_history.py`).""")
+
+code(r"""# Figura C1 — validacion: ELO reconstruido vs worldfootballrankings (las 48)
+rec = pd.read_csv("data/elo_reconstructed.csv").set_index("team")["elo"]
+cur = pd.Series(elo, name="wfr")
+J = pd.concat([rec.rename("rec"), cur], axis=1).dropna()
+r = J["rec"].corr(J["wfr"])
+fig, ax = plt.subplots(figsize=(5.4, 5.2))
+ax.scatter(J["wfr"], J["rec"], s=40, color="#1f77b4")
+m, c = np.polyfit(J["wfr"], J["rec"], 1)        # recta de ajuste (no identidad: difieren en nivel)
+xs = np.array([J["wfr"].min(), J["wfr"].max()])
+ax.plot(xs, m*xs + c, color="grey", ls="--", lw=1.2, label=f"ajuste (pendiente {m:.2f})")
+for t in ["Argentina","France","Spain","Brazil","USA","Mexico"]:
+    if t in J.index:
+        ax.annotate(t, (J.loc[t,"wfr"], J.loc[t,"rec"]), textcoords="offset points", xytext=(4,3), fontsize=8)
+ax.set_xlabel("Elo worldfootballrankings (elo.csv)"); ax.set_ylabel("Elo reconstruido (eloratings)")
+ax.set_title(f"Figura C1. Validación de la reconstrucción (r = {r:.3f})"); ax.legend(loc="upper left")
+plt.tight_layout(); plt.savefig("charts/11_elo_reconstruido.png", bbox_inches="tight"); plt.show()""")
+
+code(r"""# Tabla C1 — parametros en las tres calibraciones
+calB = json.load(open("data/calibration.json"))           # proxy
+calC = json.load(open("data/calibration_prematch.json"))  # pre-partido
+def ci_b1(c): return f"{c['beta']['b1']:.5f} ± {Z95*c['se']['b1']:.5f}"
+tC = pd.DataFrame({
+    "A mano":        ["1.35", "800", "60", "—"],
+    "Proxy (Ap. B)": [f"{calB['mu']:.2f}", f"{calB['escala']:.0f}", f"{calB['home_adv_elo']:.0f}", ci_b1(calB)],
+    "Pre-partido (Ap. C)": [f"{calC['mu']:.2f}", f"{calC['escala']:.0f}", f"{calC['home_adv_elo']:.0f}", ci_b1(calC)],
+}, index=["μ (goles base)", "escala", "h (localía, Elo)", "β₁ ± IC95"])
+display(tC.style.set_caption(
+    f"Tabla C1. La escala es robusta entre calibraciones; el IC de β₁ se angosta ~5× "
+    f"({calB['n_partidos']}→{calC['n_partidos']} partidos)."))""")
+
+code(r"""# Figura C2 — p(campeon): a mano vs proxy (B) vs pre-partido (C)
+mu, esc, h = calC["mu"], calC["escala"], calC["home_adv_elo"]
+rP, _ = wcsim.run(n=200_000, seed=2026, base=mu, scale=esc, home_adv=h)
+dP = {r_["team"]: r_["p_champion"] for r_ in rP}
+cmp3 = pd.DataFrame({"A mano": [dH[t] for t in eq], "Proxy (B)": [dM[t] for t in eq],
+                     "Pre-partido (C)": [dP[t] for t in eq]}, index=eq)
+x = np.arange(len(eq)); w = 0.27
+fig, ax = plt.subplots(figsize=(10, 4.3))
+ax.bar(x - w, cmp3["A mano"], w, label="A mano", color="#d62728")
+ax.bar(x,     cmp3["Proxy (B)"], w, label="Proxy (Ap. B)", color="#9467bd")
+ax.bar(x + w, cmp3["Pre-partido (C)"], w, label="Pre-partido (Ap. C)", color="#1f77b4")
+ax.set_xticks(x); ax.set_xticklabels(eq, rotation=40, ha="right")
+ax.yaxis.set_major_formatter(mtick.PercentFormatter(1.0)); ax.set_ylabel("p̂(campeón)")
+ax.set_title("Figura C2. Calibración a mano vs proxy vs pre-partido"); ax.legend()
+plt.tight_layout(); plt.savefig("charts/12_calibraciones.png", bbox_inches="tight"); plt.show()
+display(cmp3.style.format("{:.2%}").set_caption("Tabla C2. p̂(campeón) en las tres calibraciones (N = 2·10⁵)."))""")
+
+md(r"""**Lectura.** La reconstrucción se valida fuerte contra el rating publicado
+($r = 0{,}92$, Figura C1; corre a un nivel absoluto más alto por las constantes del algoritmo,
+pero con **dispersión comparable** —de ahí que la escala calibrada coincida con la del Apéndice B
+pese a usar métricas de Elo distintas—). Y el resultado central es que **la escala no cambia** al
+quitar el proxy: $\approx 1306$ pre-partido vs $\approx 1281$ con proxy, pero ahora sobre $3\,630$ partidos
+(todas las selecciones) con un **IC de $\beta_1$ unas 5 veces más angosto**. Es decir, la
+**dilución de regresión que temíamos era empíricamente menor**: la escala plana —y por ende la
+compresión de las favoritas— es un hallazgo **robusto**, no un artefacto del proxy. El único
+cambio material es una **ventaja de localía estimada mayor** ($h\approx 127$ Elo), que eleva a
+**USA** como anfitrión (a $\approx 12\%$); conviene recordar que la localía estimada sobre
+clasificatorias puede sobreestimar la del Mundial, más neutral. La calibración robusta deja como
+única extensión pendiente la dependencia de marcadores bajos de Dixon–Coles.""")
 
 # ===========================================================================
 # Reproducibilidad + Referencias
