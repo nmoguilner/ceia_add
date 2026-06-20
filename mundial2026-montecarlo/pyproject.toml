@@ -1,0 +1,9 @@
+[project]
+name = "mundial2026-montecarlo"
+version = "0.1.0"
+description = "Simulacion Monte Carlo del Mundial 2026 a partir del ELO y las tablas actuales"
+requires-python = ">=3.9"
+dependencies = []  # solo biblioteca estandar
+
+[tool.uv]
+package = false

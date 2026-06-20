@@ -1,0 +1,41 @@
+group,home,away
+A,Czechia,Mexico
+A,South Africa,South Korea
+B,Switzerland,Canada
+B,Bosnia and Herzegovina,Qatar
+C,Scotland,Brazil
+C,Morocco,Haiti
+D,Turkiye,USA
+D,Paraguay,Australia
+E,Germany,Ivory Coast
+E,Ecuador,Curacao
+E,Ecuador,Germany
+E,Curacao,Ivory Coast
+F,Netherlands,Sweden
+F,Tunisia,Japan
+F,Japan,Sweden
+F,Tunisia,Netherlands
+G,Belgium,Iran
+G,New Zealand,Egypt
+G,Egypt,Iran
+G,New Zealand,Belgium
+H,Spain,Saudi Arabia
+H,Uruguay,Cabo Verde
+H,Cabo Verde,Saudi Arabia
+H,Uruguay,Spain
+I,France,Iraq
+I,Norway,Senegal
+I,Norway,France
+I,Senegal,Iraq
+J,Argentina,Austria
+J,Jordan,Algeria
+J,Algeria,Austria
+J,Jordan,Argentina
+K,Portugal,Uzbekistan
+K,Colombia,DR Congo
+K,Colombia,Portugal
+K,DR Congo,Uzbekistan
+L,England,Ghana
+L,Panama,Croatia
+L,Panama,England
+L,Croatia,Ghana
