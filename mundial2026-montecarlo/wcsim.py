@@ -86,11 +86,54 @@ def load_all(base=None):
 class MatchModel:
     """Convierte ELO -> goles esperados -> resultado simulado."""
 
-    def __init__(self, elo, base=1.35, home_adv=60.0, scale=800.0):
+    def __init__(self, elo, base=1.35, home_adv=60.0, scale=800.0,
+                 total_goals=None, maxg=15):
         self.elo = elo
         self.base = base          # goles esperados base por equipo
         self.home_adv = home_adv  # bonus de ELO para equipos anfitriones
         self.scale = scale        # 800 => relacion de lambdas = 10^(dELO/400)
+        # Modo alternativo (apendice): total de goles FIJO (total_goals) repartido
+        # de modo que el puntaje esperado siga calibrado al ELO. Evita que
+        # lambda_A + lambda_B explote en partidos muy desparejos. None => baseline.
+        self.total_goals = total_goals
+        self._maxg = maxg
+        if total_goals is not None:
+            self._build_q_table()
+
+    def _expected_score(self, la, lb):
+        # P(gana A) + 0.5 P(empate) bajo dos Poisson(la), Poisson(lb)
+        M = self._maxg
+        pa = [_pmf(k, la) for k in range(M)]
+        pb = [_pmf(k, lb) for k in range(M)]
+        win = sum(pa[i]*pb[j] for i in range(M) for j in range(M) if i > j)
+        draw = sum(pa[i]*pb[i] for i in range(M))
+        return win + 0.5*draw
+
+    def _build_q_table(self):
+        # Para cada diferencia de ELO d, halla q in (0,1) tal que el puntaje
+        # esperado con lambda_A = T*q, lambda_B = T*(1-q) iguale E_A(d) del ELO.
+        T = self.total_goals
+        self._dgrid = list(range(-1000, 1001, 5))
+        self._qgrid = []
+        for d in self._dgrid:
+            E = 1.0 / (1.0 + 10.0 ** (-d / 400.0))
+            lo, hi = 1e-6, 1.0 - 1e-6
+            for _ in range(40):                      # biseccion (monotona en q)
+                q = 0.5*(lo + hi)
+                if self._expected_score(T*q, T*(1-q)) < E:
+                    lo = q
+                else:
+                    hi = q
+            self._qgrid.append(0.5*(lo + hi))
+
+    def _interp_q(self, diff):
+        d = max(-1000.0, min(1000.0, diff))
+        pos = (d + 1000.0) / 5.0
+        i = int(pos)
+        if i >= len(self._qgrid) - 1:
+            return self._qgrid[-1]
+        frac = pos - i
+        return self._qgrid[i]*(1 - frac) + self._qgrid[i+1]*frac
 
     def _eff_elo(self, team, venue=None):
         """ELO efectivo. La localia (home_adv) aplica solo si el equipo es
@@ -105,9 +148,13 @@ class MatchModel:
 
     def lambdas(self, a, b, venue=None):
         diff = self._eff_elo(a, venue) - self._eff_elo(b, venue)
-        la = self.base * 10.0 ** (diff / self.scale)
-        lb = self.base * 10.0 ** (-diff / self.scale)
-        return la, lb
+        if self.total_goals is None:                 # baseline (producto constante)
+            la = self.base * 10.0 ** (diff / self.scale)
+            lb = self.base * 10.0 ** (-diff / self.scale)
+            return la, lb
+        q = self._interp_q(diff)                     # variante (total fijo)
+        T = self.total_goals
+        return T*q, T*(1 - q)
 
     def win_prob(self, a, b, venue=None):
         """Prob. de que a venza a b a 1 partido (sin empate), via ELO clasico."""
@@ -127,6 +174,11 @@ class MatchModel:
         if gb > ga:
             return b
         return a if rng.random() < self.win_prob(a, b, venue) else b
+
+
+def _pmf(k, lam):
+    """Funcion de masa de Poisson, P(X=k)."""
+    return math.exp(-lam) * lam ** k / math.factorial(k)
 
 
 def _poisson(lam, rng):
@@ -287,9 +339,10 @@ def simulate_knockout(standings, best_thirds, bracket, model, rng):
 # Monte Carlo
 # ---------------------------------------------------------------------------
 
-def run(n=20000, seed=None, base=1.35, home_adv=60.0, data_base=None, progress=None):
+def run(n=20000, seed=None, base=1.35, home_adv=60.0, data_base=None, progress=None,
+        total_goals=None):
     data = load_all(data_base)
-    model = MatchModel(data["elo"], base=base, home_adv=home_adv)
+    model = MatchModel(data["elo"], base=base, home_adv=home_adv, total_goals=total_goals)
     rng = random.Random(seed)
 
     all_teams = list(data["elo"].keys())

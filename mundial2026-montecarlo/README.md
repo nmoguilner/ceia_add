@@ -136,6 +136,20 @@ uv run --extra notebook jupyter lab mundial2026.ipynb
 
 ![Convergencia del estimador de Monte Carlo](charts/06_convergencia.png)
 
+### Apéndice A — robustez al modelo de goles
+
+El baseline (Ec. 3) prioriza calibrar el ELO, pero como contrapartida los goles totales
+**explotan** en partidos desparejos (~7.6 esperados en Argentina–Haití). El apéndice evalúa una
+variante con **total de goles fijo** (`MatchModel(total_goals=T)`) que reparte las intensidades
+preservando el puntaje esperado del ELO (la diferencia de goles sigue una **Skellam**). Resultado:
+el *ordenamiento* de favoritas es robusto, pero las *magnitudes* se mueven —acotar el total
+transfiere ~4 pp de Argentina/Francia al pelotón medio—, así que la hipótesis de goles **no es
+inocua** y el modelo realista vive entre ambos regímenes (lo fija una calibración tipo Dixon-Coles).
+
+![Goles totales esperados: baseline vs total fijo](charts/07_goles_totales.png)
+
+![Sensibilidad de P(campeón) al modelo de goles](charts/08_sensibilidad_goles.png)
+
 ---
 
 ## Limitaciones / supuestos

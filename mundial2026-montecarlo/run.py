@@ -21,6 +21,8 @@ def main():
     ap.add_argument("--seed", type=int, default=None, help="semilla del RNG (reproducibilidad)")
     ap.add_argument("--base", type=float, default=1.35, help="goles esperados base por equipo")
     ap.add_argument("--home-adv", type=float, default=60.0, help="bonus de ELO por localia (sedes)")
+    ap.add_argument("--total-goals", type=float, default=None,
+                    help="variante: total de goles FIJO por partido (calibrado al ELO); ver Apendice A")
     ap.add_argument("--out", type=str, default=None, help="ruta CSV para volcar todos los resultados")
     ap.add_argument("--top", type=int, default=20, help="cuantas selecciones mostrar en pantalla")
     args = ap.parse_args()
@@ -29,7 +31,7 @@ def main():
           f"(seed={args.seed}, base={args.base}, localia=+{args.home_adv} ELO)...")
     results, n = wcsim.run(
         n=args.num, seed=args.seed, base=args.base, home_adv=args.home_adv,
-        progress=max(args.num // 10, 1),
+        total_goals=args.total_goals, progress=max(args.num // 10, 1),
     )
 
     champs = [r for r in results if r["titles"] > 0]

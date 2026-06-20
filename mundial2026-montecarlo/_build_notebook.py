@@ -418,10 +418,11 @@ escala $800$ no fueron calibrados por máxima verosimilitud sobre datos históri
 para reproducir la escala del Elo; una calibración formal (p. ej. Poisson bivariado de
 Dixon–Coles) es una extensión natural. (vi) Como $\lambda_A + \lambda_B$ crece con
 $|\tilde\Delta|$ (Ec. 3), el modelo **sobreestima los goles totales en duelos muy desparejos**
-($\approx 7{,}8$ goles esperados para $\tilde\Delta=600$ frente a $2{,}7$ en uno parejo), lo
-que afecta sobre todo los desempates por diferencia de gol en la fase de grupos; una compresión
-de las colas de $\lambda$ o un mapeo tipo **Skellam** lo mitigaría a costa de relajar la
-calibración exacta del Elo. (vii) La ventaja de localía $h$ se aplica a las sedes de forma
+($\approx 7{,}6$ goles esperados en Argentina–Haití frente a $2{,}7$ en uno parejo). El
+**Apéndice A** muestra que esta hipótesis **no es inocua** para la pregunta de campeón: fijar el
+total de goles (preservando la calibración del Elo) transfiere $\approx 4$ pp de las favoritas
+al pelotón medio. El modelo realista se ubica *entre* ambos regímenes de goles, y solo una
+calibración sobre marcadores históricos (Dixon–Coles) lo determina. (vii) La ventaja de localía $h$ se aplica a las sedes de forma
 **por país de la sede** de cada partido (un anfitrión solo es local en su propio país); no se
 modela el apoyo regional ni de la diáspora en estadios neutrales —p. ej. la hinchada mexicana
 en sedes de EE. UU.—, que el modelo trata como neutrales.""")
@@ -440,6 +441,73 @@ ventaja de localía. El marco es transparente, reproducible y fácilmente actual
 que avanza el torneo (basta editar `groups.csv` y `fixtures.csv`). Extensiones de interés
 incluyen la calibración por máxima verosimilitud del modelo de goles y la incorporación de la
 dependencia de Dixon–Coles.""")
+
+# ===========================================================================
+# Apendice A — modelo de goles con total acotado
+# ===========================================================================
+md(r"""## Apéndice A. Robustez al modelo de goles (total acotado / Skellam)
+
+La parametrización base (Ec. 3) prioriza reproducir la escala del Elo, pero como contrapartida
+la **suma de goles esperados crece** con la diferencia de nivel: $\lambda_A+\lambda_B$ pasa de
+$2{,}7$ en un duelo parejo a $\approx 7{,}6$ en Argentina–Haití (Figura A1), lo que asume
+goleadas poco realistas (los equipos débiles suelen cerrarse). Esta sección evalúa una
+**variante** que mantiene el total de goles **fijo** en $T$ y reparte las intensidades de modo
+que el *puntaje esperado siga calibrado al Elo*: dado $\tilde\Delta$, se halla $q\in(0,1)$ tal que
+
+$$P(G_A>G_B) + \tfrac12 P(G_A=G_B) \;=\; E_A(\tilde\Delta), \qquad
+  \lambda_A = T\,q,\;\; \lambda_B = T\,(1-q),$$
+
+resuelto por bisección (precomputado en `MatchModel(total_goals=T)`). La diferencia de goles
+$G_A-G_B$ sigue entonces una distribución **Skellam**$(\lambda_A,\lambda_B)$ con media acotada.""")
+
+code(r"""# Figura A1 — total de goles esperado: baseline (explota) vs total fijo
+dd = np.linspace(-700, 700, 281)
+base_tot = 1.35 * (10**(dd/800) + 10**(-dd/800))
+fig, ax = plt.subplots(figsize=(7.2, 3.6))
+ax.plot(dd, base_tot, lw=2.2, color="#d62728", label=r"Baseline (Ec. 3): $\mu(10^{\Delta/800}+10^{-\Delta/800})$")
+ax.axhline(2.7, lw=2.2, color="#1f77b4", label="Variante: total fijo T = 2.7")
+ax.axhline(4.0, lw=1.8, color="#2ca02c", ls="--", label="Variante: total fijo T = 4.0")
+dh = elo["Argentina"] - elo["Haiti"]
+ax.scatter([dh], [1.35*(10**(dh/800)+10**(-dh/800))], color="#d62728", zorder=5)
+ax.annotate("Argentina–Haití", (dh, 7.6), textcoords="offset points", xytext=(-95, -4), fontsize=9)
+ax.set_xlabel(r"Diferencia de Elo  $\tilde\Delta$"); ax.set_ylabel(r"$\lambda_A+\lambda_B$ (goles esperados)")
+ax.set_title("Figura A1. Goles totales esperados según el modelo"); ax.legend(fontsize=8.5)
+plt.tight_layout(); plt.savefig("charts/07_goles_totales.png", bbox_inches="tight"); plt.show()""")
+
+code(r"""# Comparacion de p(campeon): baseline vs total fijo (N = 2e5 por configuracion)
+NA = 200_000
+configs = [("Baseline", {}), ("T = 2.7", {"total_goals": 2.7}), ("T = 4.0", {"total_goals": 4.0})]
+champ_by = {}
+for name, kw in configs:
+    res, _ = wcsim.run(n=NA, seed=2026, **kw)
+    champ_by[name] = {r["team"]: r["p_champion"] for r in res}
+
+eq = ["Argentina","France","Spain","England","USA","Brazil","Morocco","Portugal"]
+cmp_df = pd.DataFrame({name: [champ_by[name][t] for t in eq] for name, _ in configs}, index=eq)
+display(cmp_df.style.format("{:.2%}").set_caption(
+    "Tabla A1. p̂(campeón) bajo el baseline y el modelo de total fijo (N = 2·10⁵)."))
+
+x = np.arange(len(eq)); w = 0.26
+fig, ax = plt.subplots(figsize=(10, 4.4))
+ax.bar(x - w, cmp_df["Baseline"], w, label="Baseline (Ec. 3)", color="#d62728")
+ax.bar(x,     cmp_df["T = 2.7"], w, label="Total fijo T = 2.7", color="#1f77b4")
+ax.bar(x + w, cmp_df["T = 4.0"], w, label="Total fijo T = 4.0", color="#2ca02c")
+ax.set_xticks(x); ax.set_xticklabels(eq, rotation=40, ha="right")
+ax.yaxis.set_major_formatter(mtick.PercentFormatter(1.0)); ax.set_ylabel("p̂(campeón)")
+ax.set_title("Figura A2. Sensibilidad de p̂(campeón) al modelo de goles"); ax.legend()
+plt.tight_layout(); plt.savefig("charts/08_sensibilidad_goles.png", bbox_inches="tight"); plt.show()""")
+
+md(r"""**Lectura.** El **ordenamiento** de las favoritas es robusto (las cuatro de cabeza no
+cambian de posición), pero las **magnitudes sí se mueven**: al acotar el total de goles, la
+probabilidad de título de Argentina y Francia cae varios puntos porcentuales (de $\approx 28{,}6\%$
+y $25{,}7\%$ hacia $\approx 24{-}25\%$ y $\approx 22{-}23\%$ con $T=2{,}7$) y se redistribuye
+hacia el pelotón medio (USA, Brasil, Marruecos). El mecanismo: con menos goles en los partidos
+desparejos aumenta la **frecuencia de empates**, lo que —vía el sistema de 3-1-0 en la fase de
+grupos y los penales en la eliminatoria— erosiona la prima de los más fuertes y abre la puerta a
+sorpresas. La realidad del fútbol se ubica *entre* el baseline (goleadas exageradas) y el total
+estrictamente fijo (sin premio de gol al favorito); fijar el punto intermedio correcto requiere
+**calibrar el modelo de goles sobre marcadores históricos** (p. ej. Poisson bivariado de
+Dixon–Coles [3]), la extensión natural de este trabajo.""")
 
 # ===========================================================================
 # Reproducibilidad + Referencias
