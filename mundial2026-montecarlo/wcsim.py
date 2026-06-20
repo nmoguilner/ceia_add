@@ -340,9 +340,10 @@ def simulate_knockout(standings, best_thirds, bracket, model, rng):
 # ---------------------------------------------------------------------------
 
 def run(n=20000, seed=None, base=1.35, home_adv=60.0, data_base=None, progress=None,
-        total_goals=None):
+        total_goals=None, scale=800.0):
     data = load_all(data_base)
-    model = MatchModel(data["elo"], base=base, home_adv=home_adv, total_goals=total_goals)
+    model = MatchModel(data["elo"], base=base, home_adv=home_adv, scale=scale,
+                       total_goals=total_goals)
     rng = random.Random(seed)
 
     all_teams = list(data["elo"].keys())

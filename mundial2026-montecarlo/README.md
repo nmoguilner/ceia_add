@@ -150,6 +150,34 @@ inocua** y el modelo realista vive entre ambos regímenes (lo fija una calibraci
 
 ![Sensibilidad de P(campeón) al modelo de goles](charts/08_sensibilidad_goles.png)
 
+### Apéndice B — calibración por MLE (datos reales)
+
+En vez de fijar `μ`, la escala y `h` a mano, se estiman **de los datos** por máxima verosimilitud:
+una **regresión de Poisson** de los goles contra la diferencia de ELO y un indicador de localía
+(`log λ = β₀ + β₁·ΔELO + β₂·local`), ajustada sobre 435 partidos internacionales recientes
+(≥2023) entre las 48 selecciones. Script: [`calibrate.py`](calibrate.py) → [`data/calibration.json`](data/calibration.json).
+
+```bash
+uv run --extra notebook python calibrate.py     # ajusta y escribe data/calibration.json
+python3 run.py -n 1000000 --seed 2026 --calibrated   # 1M con el modelo calibrado
+```
+
+| Parámetro | A mano | **MLE** |
+|---|---:|---:|
+| μ (goles base) | 1.35 | **1.21** |
+| escala | 800 | **1281** |
+| h (localía, pts ELO) | 60 | **86.7** |
+
+La escala real es **más plana** (~1280 vs 800): el goleo crece con la diferencia de ELO más
+lento de lo que asumía el baseline, que por lo tanto **sobreestima a las favoritas**. Con el
+modelo calibrado, Argentina pasa de 28.6 % a **~20 %** y Francia de 25.7 % a **~19 %**, con el
+pelotón medio (USA, Brasil, Marruecos, México) subiendo. La dirección coincide con el Apéndice A.
+*Caveat:* se usa el ELO actual como proxy, lo que atenúa `β₁` (la magnitud es un límite superior).
+
+![Calibración: el ajuste por datos es más plano](charts/09_calibracion_mle.png)
+
+![Efecto de la calibración sobre P(campeón)](charts/10_mle_vs_amano.png)
+
 ---
 
 ## Limitaciones / supuestos

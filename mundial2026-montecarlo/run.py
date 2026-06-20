@@ -10,6 +10,7 @@ Uso:
 
 import argparse
 import csv
+import os
 import sys
 
 import wcsim
@@ -23,14 +24,24 @@ def main():
     ap.add_argument("--home-adv", type=float, default=60.0, help="bonus de ELO por localia (sedes)")
     ap.add_argument("--total-goals", type=float, default=None,
                     help="variante: total de goles FIJO por partido (calibrado al ELO); ver Apendice A")
+    ap.add_argument("--calibrated", action="store_true",
+                    help="usa los parametros estimados por MLE (data/calibration.json); ver Apendice B")
     ap.add_argument("--out", type=str, default=None, help="ruta CSV para volcar todos los resultados")
     ap.add_argument("--top", type=int, default=20, help="cuantas selecciones mostrar en pantalla")
     args = ap.parse_args()
 
+    base, home_adv, scale = args.base, args.home_adv, 800.0
+    if args.calibrated:
+        import json
+        here = os.path.dirname(os.path.abspath(__file__))
+        cal = json.load(open(os.path.join(here, "data", "calibration.json"), encoding="utf-8"))
+        base, scale, home_adv = cal["mu"], cal["escala"], cal["home_adv_elo"]
+
     print(f"Simulando {args.num:,} escenarios del Mundial 2026 "
-          f"(seed={args.seed}, base={args.base}, localia=+{args.home_adv} ELO)...")
+          f"(seed={args.seed}, base={base:.3f}, escala={scale:.0f}, localia=+{home_adv:.0f} ELO"
+          f"{', MLE' if args.calibrated else ''})...")
     results, n = wcsim.run(
-        n=args.num, seed=args.seed, base=args.base, home_adv=args.home_adv,
+        n=args.num, seed=args.seed, base=base, home_adv=home_adv, scale=scale,
         total_goals=args.total_goals, progress=max(args.num // 10, 1),
     )
 

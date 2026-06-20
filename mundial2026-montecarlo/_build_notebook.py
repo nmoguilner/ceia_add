@@ -414,9 +414,9 @@ la correlación intra-partido y la dependencia del marcador documentada por Dixo
 (iii) La asignación de terceros emplea un *matching* válido por grupos admitidos en lugar de la
 tabla FIFA exacta de 495 combinaciones, un efecto de segundo orden sobre la identidad del
 campeón. (iv) Trece ratings de selecciones menores son estimados. (v) Los parámetros $\mu$ y la
-escala $800$ no fueron calibrados por máxima verosimilitud sobre datos históricos, sino fijados
-para reproducir la escala del Elo; una calibración formal (p. ej. Poisson bivariado de
-Dixon–Coles) es una extensión natural. (vi) Como $\lambda_A + \lambda_B$ crece con
+escala $800$ se fijaron para reproducir la escala del Elo; el **Apéndice B** los estima por
+**máxima verosimilitud** (regresión de Poisson) y halla una escala real más plana
+($\approx 1280$ vs $800$), lo que comprime a las favoritas —coherente con el Apéndice A—. (vi) Como $\lambda_A + \lambda_B$ crece con
 $|\tilde\Delta|$ (Ec. 3), el modelo **sobreestima los goles totales en duelos muy desparejos**
 ($\approx 7{,}6$ goles esperados en Argentina–Haití frente a $2{,}7$ en uno parejo). El
 **Apéndice A** muestra que esta hipótesis **no es inocua** para la pregunta de campeón: fijar el
@@ -438,9 +438,11 @@ y la grilla eliminatoria oficial completa. Sobre $10^{6}$ réplicas, **Argentina
 **Francia ($25{,}7\%$)**, **España ($14{,}3\%$)** e **Inglaterra ($12{,}0\%$)** son las
 principales candidatas, con errores de Monte Carlo despreciables y un ordenamiento robusto a la
 ventaja de localía. El marco es transparente, reproducible y fácilmente actualizable a medida
-que avanza el torneo (basta editar `groups.csv` y `fixtures.csv`). Extensiones de interés
-incluyen la calibración por máxima verosimilitud del modelo de goles y la incorporación de la
-dependencia de Dixon–Coles.""")
+que avanza el torneo (basta editar `groups.csv` y `fixtures.csv`). Una calibración por máxima
+verosimilitud sobre datos históricos (**Apéndice B**) sugiere que estas cifras **sobreestiman a
+las favoritas**: con parámetros estimados de los datos, el modelo es más plano y competitivo
+(Argentina $\approx 20\%$). La continuación natural es reconstruir el Elo pre-partido histórico
+para eliminar el proxy de la calibración e incorporar la dependencia de Dixon–Coles.""")
 
 # ===========================================================================
 # Apendice A — modelo de goles con total acotado
@@ -510,6 +512,84 @@ estrictamente fijo (sin premio de gol al favorito); fijar el punto intermedio co
 Dixon–Coles [3]), la extensión natural de este trabajo.""")
 
 # ===========================================================================
+# Apendice B — calibracion por MLE
+# ===========================================================================
+md(r"""## Apéndice B. Calibración por máxima verosimilitud (MLE)
+
+Los parámetros $\mu$, escala y $h$ se fijaron a mano para reproducir la escala del Elo. Aquí se
+**estiman a partir de datos** por máxima verosimilitud, ajustando una **regresión de Poisson** de
+los goles marcados sobre la diferencia de Elo y un indicador de localía,
+
+$$\log \mathbb{E}[\text{goles}] = \beta_0 + \beta_1\,\Delta_{\text{Elo}} + \beta_2\,\text{local},$$
+
+sobre el histórico de partidos internacionales recientes ($\ge 2023$) entre las 48 selecciones
+[14] (script `calibrate.py`, IRLS / Newton-Raphson). El modelo es el del paper en otra forma, de
+modo que $\mu=e^{\beta_0}$, $\text{escala}=\ln 10/\beta_1$ y $h=\beta_2/\beta_1$.
+
+**Caveat.** Se usa el Elo *actual* como proxy de la fuerza al momento de cada partido. El error
+de medición en el regresor **atenúa** $\beta_1$ hacia cero (dilución de regresión), por lo que la
+escala estimada es probablemente un **límite superior** (el modelo real, algo menos plano). Una
+calibración definitiva reconstruiría el Elo pre-partido histórico.""")
+
+code(r"""import json
+cal = json.load(open("data/calibration.json"))
+b, sec = cal["beta"], cal["se"]
+filas = [("β₀ (intercepto)", b["b0"], sec["b0"]),
+         ("β₁ (ΔElo)",       b["b1"], sec["b1"]),
+         ("β₂ (local)",      b["b2"], sec["b2"])]
+coef = pd.DataFrame([(n, f"{v:.5f}", f"[{v-Z95*s:.5f}; {v+Z95*s:.5f}]") for n, v, s in filas],
+                    columns=["Coeficiente", "MLE", "IC 95%"])
+display(coef.style.hide(axis="index").set_caption(
+    f"Tabla B1. Regresión de Poisson (N = {cal['n_partidos']} partidos, ≥ {cal['desde']})."))
+
+der = pd.DataFrame([["μ  (goles base)", f"{cal['mu']:.3f}", "1.35"],
+                    ["escala", f"{cal['escala']:.0f}", "800"],
+                    ["h  (localía, pts Elo)", f"{cal['home_adv_elo']:.1f}", "60"]],
+                   columns=["Parámetro", "MLE (datos)", "Fijado a mano"])
+display(der.style.hide(axis="index").set_caption("Tabla B2. Parámetros derivados del ajuste."))""")
+
+code(r"""# Figura B1 — goles esperados del más fuerte: fijado a mano vs MLE (escala mas plana)
+dd = np.linspace(0, 500, 200)
+g_hand = 1.35 * 10**(dd/800.0)
+g_mle = cal["mu"] * 10**(dd/cal["escala"])
+fig, ax = plt.subplots(figsize=(7, 3.5))
+ax.plot(dd, g_hand, lw=2.2, color="#d62728", label="Fijado a mano (escala 800)")
+ax.plot(dd, g_mle, lw=2.2, color="#1f77b4", label=f"MLE (escala {cal['escala']:.0f})")
+ax.set_xlabel(r"Ventaja de Elo del favorito  $\Delta$")
+ax.set_ylabel(r"$\lambda$ del favorito (goles esp.)")
+ax.set_title("Figura B1. El ajuste por datos es más plano"); ax.legend()
+plt.tight_layout(); plt.savefig("charts/09_calibracion_mle.png", bbox_inches="tight"); plt.show()""")
+
+code(r"""# Re-corrida con el modelo calibrado por MLE vs el fijado a mano (N = 2e5)
+mu, esc, h = cal["mu"], cal["escala"], cal["home_adv_elo"]
+rH, _ = wcsim.run(n=200_000, seed=2026)                               # a mano
+rM, _ = wcsim.run(n=200_000, seed=2026, base=mu, scale=esc, home_adv=h)  # MLE
+dH = {r["team"]: r["p_champion"] for r in rH}
+dM = {r["team"]: r["p_champion"] for r in rM}
+eq = ["Argentina","France","Spain","England","USA","Brazil","Morocco","Portugal","Netherlands","Mexico"]
+cmp2 = pd.DataFrame({"A mano": [dH[t] for t in eq], "MLE": [dM[t] for t in eq]}, index=eq)
+display(cmp2.style.format("{:.2%}").set_caption(
+    "Tabla B3. p̂(campeón): modelo fijado a mano vs calibrado por MLE (N = 2·10⁵)."))
+
+x = np.arange(len(eq)); w = 0.38
+fig, ax = plt.subplots(figsize=(10, 4.3))
+ax.bar(x - w/2, cmp2["A mano"], w, label="Fijado a mano", color="#d62728")
+ax.bar(x + w/2, cmp2["MLE"], w, label="Calibrado (MLE)", color="#1f77b4")
+ax.set_xticks(x); ax.set_xticklabels(eq, rotation=40, ha="right")
+ax.yaxis.set_major_formatter(mtick.PercentFormatter(1.0)); ax.set_ylabel("p̂(campeón)")
+ax.set_title("Figura B2. Efecto de la calibración por datos sobre p̂(campeón)"); ax.legend()
+plt.tight_layout(); plt.savefig("charts/10_mle_vs_amano.png", bbox_inches="tight"); plt.show()""")
+
+md(r"""**Lectura.** La calibración por datos arroja una escala **más plana** ($\approx 1280$ vs
+$800$): el goleo crece con la diferencia de Elo más lento de lo que asumía el baseline, es decir
+el baseline **sobreestima el dominio de los favoritos**. Al re-correr con el modelo calibrado, la
+probabilidad de título de las grandes cae con fuerza (Argentina $\approx 28{,}6\% \to 20\%$,
+Francia $\approx 25{,}7\% \to 19\%$) y se redistribuye al pelotón medio; USA sube además por la
+localía estimada ($h\approx 87$). La **dirección** confirma el Apéndice A con datos reales; la
+**magnitud** debe leerse con cautela por la dilución del proxy. Reconstruir el Elo pre-partido
+histórico —evitando el proxy— es la continuación natural de este trabajo.""")
+
+# ===========================================================================
 # Reproducibilidad + Referencias
 # ===========================================================================
 md(r"""## Reproducibilidad
@@ -560,7 +640,10 @@ https://www.cbssports.com/soccer/news/world-cup-group-standings-table-results/
 https://worldcuppass.com/world-cup-2026-round-of-32/
 
 [13] Wikipedia (2026). 2026 FIFA World Cup knockout stage (sedes por partido).
-https://en.wikipedia.org/wiki/2026_FIFA_World_Cup_knockout_stage""")
+https://en.wikipedia.org/wiki/2026_FIFA_World_Cup_knockout_stage
+
+[14] Jürisoo, M. (martj42). International football results from 1872 to 2026 (dataset).
+https://github.com/martj42/international_results""")
 
 nb["cells"] = cells
 nb["metadata"] = {
