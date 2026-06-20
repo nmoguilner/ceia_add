@@ -167,13 +167,15 @@ code(r"""# Ec. (5): probabilidades G/E/P analiticas a partir de las intensidades
 def pois_pmf(k, lam):
     return math.exp(-lam) * lam**k / math.factorial(k)
 
-def wdl(a, b, model, maxg=15):
+def wdl(a, b, model, maxg=25):
     la, lb = model.lambdas(a, b)
     pa = [pois_pmf(k, la) for k in range(maxg)]
     pb = [pois_pmf(k, lb) for k in range(maxg)]
-    win = sum(pa[i]*pb[j] for i in range(maxg) for j in range(maxg) if i > j)
+    win  = sum(pa[i]*pb[j] for i in range(maxg) for j in range(maxg) if i > j)
     draw = sum(pa[i]*pb[i] for i in range(maxg))
-    return win, draw, 1 - win - draw
+    loss = sum(pa[i]*pb[j] for i in range(maxg) for j in range(maxg) if i < j)
+    total = win + draw + loss   # normaliza y absorbe el residuo de las colas truncadas
+    return win/total, draw/total, loss/total
 
 model = wcsim.MatchModel(elo)
 pares = [("Argentina","Brazil"),("Spain","England"),("France","USA"),
@@ -402,7 +404,14 @@ tabla FIFA exacta de 495 combinaciones, un efecto de segundo orden sobre la iden
 campeón. (iv) Trece ratings de selecciones menores son estimados. (v) Los parámetros $\mu$ y la
 escala $800$ no fueron calibrados por máxima verosimilitud sobre datos históricos, sino fijados
 para reproducir la escala del Elo; una calibración formal (p. ej. Poisson bivariado de
-Dixon–Coles) es una extensión natural.""")
+Dixon–Coles) es una extensión natural. (vi) Como $\lambda_A + \lambda_B$ crece con
+$|\tilde\Delta|$ (Ec. 3), el modelo **sobreestima los goles totales en duelos muy desparejos**
+($\approx 7{,}8$ goles esperados para $\tilde\Delta=600$ frente a $2{,}7$ en uno parejo), lo
+que afecta sobre todo los desempates por diferencia de gol en la fase de grupos; una compresión
+de las colas de $\lambda$ o un mapeo tipo **Skellam** lo mitigaría a costa de relajar la
+calibración exacta del Elo. (vii) La ventaja de localía $h$ se aplica a las sedes de forma
+**incondicional** (no por estadio); en cruces eliminatorios disputados en otra sede el factor
+cancha real es menor, sesgo cuyo impacto acota el análisis de sensibilidad de la Tabla 2.""")
 
 # ===========================================================================
 # 6. Conclusiones
