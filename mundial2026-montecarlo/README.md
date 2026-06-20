@@ -47,7 +47,10 @@ goles_A ~ Poisson(λ_A),   goles_B ~ Poisson(λ_B)
 
 Esto hace que el cociente de goles esperados sea `10^(ΔELO/400)` (la forma clásica
 del ELO) y mantiene el total de goles aproximadamente constante. Las sedes
-(USA, México, Canadá) reciben un bonus de ELO por localía.
+(USA, México, Canadá) reciben un bonus de ELO por localía **solo cuando juegan en su
+propio país**: en grupos siempre son locales; en la eliminación, la sede de cada partido
+está fijada por el calendario oficial (`venue` en `bracket.json`), de modo que un anfitrión
+puede jugar fuera de su país (la final y todo desde cuartos se juega en EE. UU.).
 
 **Fase de grupos:** se arranca del estado **actual** (puntos, GF, GA del snapshot) y
 se simulan solo los partidos que faltan. El orden final de cada grupo se resuelve por
@@ -85,24 +88,26 @@ bracket de [worldcuppass.com](https://worldcuppass.com/world-cup-2026-round-of-3
 
 | # | Selección | ELO | P(campeón) | P(final) | P(semi) |
 |---|-----------|-----|-----------:|---------:|--------:|
-| 1 | Argentina | 1889 | **28.3 %** | 46.4 % | 67.5 % |
-| 2 | France | 1887 | **25.0 %** | 42.2 % | 62.3 % |
-| 3 | Spain | 1856 | **14.1 %** | 26.2 % | 47.5 % |
-| 4 | England | 1848 | **12.1 %** | 23.4 % | 44.6 % |
-| 5 | USA | 1710 | 3.7 % | 10.2 % | 27.4 % |
-| 6 | Mexico | 1722 | 3.1 % | 8.1 % | 20.3 % |
-| 7 | Brazil | 1772 | 2.7 % | 7.5 % | 18.4 % |
-| 8 | Morocco | 1770 | 2.7 % | 7.4 % | 18.7 % |
-| 9 | Portugal | 1755 | 2.0 % | 6.0 % | 15.5 % |
-| 10 | Netherlands | 1764 | 1.8 % | 5.2 % | 12.9 % |
+| 1 | Argentina | 1889 | **28.6 %** | 46.7 % | 68.0 % |
+| 2 | France | 1887 | **25.7 %** | 43.3 % | 62.2 % |
+| 3 | Spain | 1856 | **14.3 %** | 26.2 % | 47.5 % |
+| 4 | England | 1848 | **12.0 %** | 23.4 % | 44.7 % |
+| 5 | USA | 1710 | 3.8 % | 10.2 % | 27.5 % |
+| 6 | Morocco | 1770 | 3.0 % | 8.2 % | 20.2 % |
+| 7 | Brazil | 1772 | 2.9 % | 8.1 % | 19.7 % |
+| 8 | Portugal | 1755 | 2.1 % | 6.0 % | 15.5 % |
+| 9 | Netherlands | 1764 | 2.0 % | 5.6 % | 13.5 % |
+| 10 | Germany | 1744 | 1.4 % | 4.5 % | 11.7 % |
+| 11 | Mexico | 1722 | 1.3 % | 4.6 % | 16.1 % |
 
-En total **35 selecciones** salieron campeonas en al menos un escenario. El detalle
+En total **33 selecciones** salieron campeonas en al menos un escenario. El detalle
 completo de las 48 (campeón / final / semi) está en [`resultados_1M.csv`](resultados_1M.csv).
 La columna `P(semi)` deja a la vista que la **grilla de eliminatorias completa** (Ronda de
 32 → octavos → cuartos → semi → final) entra en el cómputo, no solo la final.
 
-> USA y México aparecen por encima de su ELO puro por la **ventaja de localía** y por
-> estar ya primeros de grupo (llave más favorable en la Ronda de 32).
+> **Localía geográfica:** la ventaja de sede solo se aplica cuando un anfitrión juega en su
+> país. Por eso México (local en R32/octavos pero no en las rondas finales, todas en EE. UU.)
+> llega seguido a instancias intermedias —P(semi) ≈ 16 %— pero su P(campeón) cae a ~1.3 %.
 
 ---
 

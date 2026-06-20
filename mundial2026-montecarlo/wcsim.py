@@ -22,6 +22,7 @@ import os
 import random
 
 HOSTS = {"USA", "Mexico", "Canada"}  # sedes 2026: ventaja de localia
+HOST_COUNTRY = {"USA": "USA", "Mexico": "MEX", "Canada": "CAN"}  # equipo -> pais sede
 
 # ---------------------------------------------------------------------------
 # Carga de datos
@@ -91,34 +92,41 @@ class MatchModel:
         self.home_adv = home_adv  # bonus de ELO para equipos anfitriones
         self.scale = scale        # 800 => relacion de lambdas = 10^(dELO/400)
 
-    def _eff_elo(self, team):
+    def _eff_elo(self, team, venue=None):
+        """ELO efectivo. La localia (home_adv) aplica solo si el equipo es
+        anfitrion y el partido se juega EN SU PAIS. Con venue=None (fase de
+        grupos) las sedes juegan de local, asi que basta con ser anfitrion."""
         e = self.elo.get(team, 1450.0)
-        return e + (self.home_adv if team in HOSTS else 0.0)
+        if venue is None:
+            home = team in HOSTS
+        else:
+            home = HOST_COUNTRY.get(team) == venue
+        return e + (self.home_adv if home else 0.0)
 
-    def lambdas(self, a, b):
-        diff = self._eff_elo(a) - self._eff_elo(b)
+    def lambdas(self, a, b, venue=None):
+        diff = self._eff_elo(a, venue) - self._eff_elo(b, venue)
         la = self.base * 10.0 ** (diff / self.scale)
         lb = self.base * 10.0 ** (-diff / self.scale)
         return la, lb
 
-    def win_prob(self, a, b):
+    def win_prob(self, a, b, venue=None):
         """Prob. de que a venza a b a 1 partido (sin empate), via ELO clasico."""
-        diff = self._eff_elo(a) - self._eff_elo(b)
+        diff = self._eff_elo(a, venue) - self._eff_elo(b, venue)
         return 1.0 / (1.0 + 10.0 ** (-diff / 400.0))
 
     def play_group(self, a, b, rng):
         la, lb = self.lambdas(a, b)
         return _poisson(la, rng), _poisson(lb, rng)
 
-    def play_knockout(self, a, b, rng):
+    def play_knockout(self, a, b, rng, venue=None):
         """Devuelve el equipo ganador (empate -> penales segun ELO)."""
-        la, lb = self.lambdas(a, b)
+        la, lb = self.lambdas(a, b, venue)
         ga, gb = _poisson(la, rng), _poisson(lb, rng)
         if ga > gb:
             return a
         if gb > ga:
             return b
-        return a if rng.random() < self.win_prob(a, b) else b
+        return a if rng.random() < self.win_prob(a, b, venue) else b
 
 
 def _poisson(lam, rng):
@@ -255,12 +263,12 @@ def simulate_knockout(standings, best_thirds, bracket, model, rng):
     for m in r32:
         a = resolve_slot(m["a"], standings, third_slot_team, m["match"])
         b = resolve_slot(m["b"], standings, third_slot_team, m["match"])
-        winners[m["match"]] = model.play_knockout(a, b, rng)
+        winners[m["match"]] = model.play_knockout(a, b, rng, m.get("venue"))
 
     for node in bracket["tree"]:
         a = winners[node["a"]]
         b = winners[node["b"]]
-        winners[node["match"]] = model.play_knockout(a, b, rng)
+        winners[node["match"]] = model.play_knockout(a, b, rng, node.get("venue"))
 
     tree = bracket["tree"]
     by_match = {node["match"]: node for node in tree}

@@ -30,8 +30,8 @@ contendientes, calibradas de modo que el cociente de goles esperados reproduzca 
 clásica del Elo. A partir del estado actual de los 12 grupos se simulan los encuentros
 restantes, la clasificación (dos primeros de cada grupo más los ocho mejores terceros) y la
 totalidad de la fase eliminatoria respetando la plantilla oficial de la Ronda de 32. Sobre
-$N=10^{6}$ réplicas independientes se obtiene que **Argentina** ($28{,}3\%$), **Francia**
-($25{,}0\%$), **España** ($14{,}1\%$) e **Inglaterra** ($12{,}1\%$) concentran cerca del
+$N=10^{6}$ réplicas independientes se obtiene que **Argentina** ($28{,}6\%$), **Francia**
+($25{,}7\%$), **España** ($14{,}3\%$) e **Inglaterra** ($12{,}0\%$) concentran cerca del
 $80\%$ de los títulos. Se reportan los **errores estándar de Monte Carlo** e
 **intervalos de confianza del 95\%**, se verifica la **convergencia** del estimador y se
 analiza la **sensibilidad** a la ventaja de localía. La implementación del motor utiliza
@@ -120,8 +120,16 @@ como función exclusiva de la diferencia $\Delta = R_A - R_B$:
 $$E_A(\Delta) \;=\; \frac{1}{1 + 10^{-\Delta/400}}, \qquad E_B = 1 - E_A. \tag{1}$$
 
 La constante $400$ fija la escala: una ventaja de $\Delta = 400$ implica $E_A \approx 0{,}91$.
-Las sedes (USA, México, Canadá) reciben una **ventaja de localía** $h$ que se suma a su rating
-efectivo, $\tilde R_i = R_i + h\,\mathbb{1}\{i \in \text{sedes}\}$, con $h = 60$ por defecto.""")
+Las sedes (USA, México, Canadá) reciben una **ventaja de localía** $h$ ($=60$ por defecto)
+solo cuando juegan **en su propio país**:
+
+$$\tilde R_i = R_i + h\,\mathbb{1}\{\text{la sede del partido está en el país de } i\}.$$
+
+En la fase de grupos cada anfitrión juega de local; en la fase eliminatoria la sede está
+fijada por número de partido según el calendario oficial [13] (`venue` en `bracket.json`), de
+modo que un anfitrión puede jugar fuera de su país: la final y todas las rondas desde cuartos
+se disputan en EE. UU., mientras que solo seis cruces de las primeras rondas ocurren en México
+(M75, M79, M92) o Canadá (M83, M85, M96).""")
 
 code(r"""# Figura 1 — funcion logistica del Elo (Ec. 1)
 d = np.linspace(-500, 500, 400)
@@ -387,10 +395,14 @@ md(r"""## 5. Discusión
 
 Los resultados ubican a **Argentina** y **Francia** netamente por encima del resto, seguidas
 por **España** e **Inglaterra**; las cuatro acumulan $\approx 80\%$ de los títulos, en línea
-con su Elo (las cuatro de mayor rating) y con el favoritismo del consenso futbolístico. Las
-sedes **USA** y **México** superan lo que sugeriría su Elo puro por dos efectos combinados: la
-ventaja de localía $h$ y una posición de llave favorable derivada de haber asegurado el primer
-puesto de grupo, lo que ablanda su Ronda de 32.
+con su Elo (las cuatro de mayor rating) y con el favoritismo del consenso futbolístico.
+**USA** supera lo que sugeriría su Elo puro porque juega de local en casi todo el cuadro —la
+final y las rondas desde cuartos se disputan íntegramente en EE. UU.— y por su llave favorable
+tras ganar el grupo. **México**, en cambio, alcanza con frecuencia las rondas intermedias —es
+local en sus sedes de la Ronda de 32 y octavos, con $P(\text{semi})\approx 16\%$ (Figura 4)—
+pero su probabilidad de título cae marcadamente ($\approx 1{,}3\%$) al perder la localía en las
+rondas finales; este contraste es justamente lo que captura la localía **geográfica** y que un
+bonus incondicional ocultaría.
 
 **Validez estadística.** Los intervalos de la Tabla 1 y la Figura 5 muestran que, con
 $N=10^{6}$, el error de Monte Carlo es de centésimas de punto porcentual: las estimaciones son
@@ -410,8 +422,9 @@ $|\tilde\Delta|$ (Ec. 3), el modelo **sobreestima los goles totales en duelos mu
 que afecta sobre todo los desempates por diferencia de gol en la fase de grupos; una compresión
 de las colas de $\lambda$ o un mapeo tipo **Skellam** lo mitigaría a costa de relajar la
 calibración exacta del Elo. (vii) La ventaja de localía $h$ se aplica a las sedes de forma
-**incondicional** (no por estadio); en cruces eliminatorios disputados en otra sede el factor
-cancha real es menor, sesgo cuyo impacto acota el análisis de sensibilidad de la Tabla 2.""")
+**por país de la sede** de cada partido (un anfitrión solo es local en su propio país); no se
+modela el apoyo regional ni de la diáspora en estadios neutrales —p. ej. la hinchada mexicana
+en sedes de EE. UU.—, que el modelo trata como neutrales.""")
 
 # ===========================================================================
 # 6. Conclusiones
@@ -420,8 +433,8 @@ md(r"""## 6. Conclusiones
 
 Se estimaron, mediante simulación de Monte Carlo desde el estado actual del Mundial 2026, las
 probabilidades de campeonato de las 48 selecciones, integrando un modelo de partido Elo→Poisson
-y la grilla eliminatoria oficial completa. Sobre $10^{6}$ réplicas, **Argentina ($28{,}3\%$)**,
-**Francia ($25{,}0\%$)**, **España ($14{,}1\%$)** e **Inglaterra ($12{,}1\%$)** son las
+y la grilla eliminatoria oficial completa. Sobre $10^{6}$ réplicas, **Argentina ($28{,}6\%$)**,
+**Francia ($25{,}7\%$)**, **España ($14{,}3\%$)** e **Inglaterra ($12{,}0\%$)** son las
 principales candidatas, con errores de Monte Carlo despreciables y un ordenamiento robusto a la
 ventaja de localía. El marco es transparente, reproducible y fácilmente actualizable a medida
 que avanza el torneo (basta editar `groups.csv` y `fixtures.csv`). Extensiones de interés
@@ -476,7 +489,10 @@ https://www.cbssports.com/soccer/news/world-cup-group-standings-table-results/
 [11] NBC Sports (2026). 2026 World Cup group stage table — full standings for all 12 groups.
 
 [12] WorldCupPass (2026). World Cup 2026 Round of 32: format, schedule and bracket.
-https://worldcuppass.com/world-cup-2026-round-of-32/""")
+https://worldcuppass.com/world-cup-2026-round-of-32/
+
+[13] Wikipedia (2026). 2026 FIFA World Cup knockout stage (sedes por partido).
+https://en.wikipedia.org/wiki/2026_FIFA_World_Cup_knockout_stage""")
 
 nb["cells"] = cells
 nb["metadata"] = {
