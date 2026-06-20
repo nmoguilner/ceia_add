@@ -3,7 +3,8 @@ name = "mundial2026-montecarlo"
 version = "0.1.0"
 description = "Simulacion Monte Carlo del Mundial 2026 a partir del ELO y las tablas actuales"
 requires-python = ">=3.11"
-dependencies = []  # el motor (wcsim.py / run.py) solo usa la biblioteca estandar
+# El motor lee los datos en Parquet -> requiere pyarrow (no hay lector en stdlib).
+dependencies = ["pyarrow>=14"]
 
 [project.optional-dependencies]
 # Solo para el notebook y los graficos (no para correr la simulacion):

@@ -16,20 +16,16 @@ Se usa el ELO actual (elo.csv) como proxy de fuerza, por lo que el ajuste se
 restringe a partidos recientes (>= 2023) entre las selecciones con ELO conocido,
 donde el proxy es razonable. Errores estandar por la informacion de Fisher.
 
-Fuente del historico: https://github.com/martj42/international_results
-Requiere numpy (uv sync --extra notebook). Escribe data/calibration.json.
+Lee data/history.parquet (generado por convert_to_parquet.py; fuente martj42).
+Requiere numpy + pyarrow (uv sync --extra notebook). Escribe data/calibration.json.
 """
-import csv
-import io
 import json
 import os
-import urllib.request
 
 import numpy as np
 
 import wcsim
 
-RESULTS_URL = "https://raw.githubusercontent.com/martj42/international_results/master/results.csv"
 DESDE = "2023-01-01"
 
 # Nombres del dataset (martj42) -> nombres de elo.csv
@@ -43,12 +39,9 @@ ALIAS = {
 }
 
 
-def cargar_historico(path_cache="/tmp/intl_results.csv"):
-    if not os.path.exists(path_cache):
-        print("Descargando historico de partidos...")
-        urllib.request.urlretrieve(RESULTS_URL, path_cache)
-    with open(path_cache, newline="", encoding="utf-8") as f:
-        return list(csv.DictReader(f))
+def cargar_historico():
+    here = os.path.dirname(os.path.abspath(__file__))
+    return wcsim.read_parquet(os.path.join(here, "data", "history.parquet"))
 
 
 def construir_dataset(filas, elo):
@@ -58,17 +51,14 @@ def construir_dataset(filas, elo):
     for r in filas:
         if r["date"] < DESDE:
             continue
-        if r["home_score"] in ("", "NA") or r["away_score"] in ("", "NA"):
+        if r["home_score"] is None or r["away_score"] is None:
             continue
         h = ALIAS.get(r["home_team"], r["home_team"])
         a = ALIAS.get(r["away_team"], r["away_team"])
         if h not in elo or a not in elo:
             continue
-        try:
-            gh, ga = int(r["home_score"]), int(r["away_score"])
-        except ValueError:
-            continue
-        neutral = r["neutral"].strip().upper() == "TRUE"
+        gh, ga = int(r["home_score"]), int(r["away_score"])
+        neutral = bool(r["neutral"])
         d = elo[h] - elo[a]
         local_h = 0.0 if neutral else 1.0
         # fila del equipo local
@@ -128,7 +118,7 @@ def main():
     print(f"  h (ELO) = {h_elo:.1f}   (paper: 60 fijado a mano)")
 
     out = {
-        "fuente": RESULTS_URL,
+        "fuente": "data/history.parquet (martj42/international_results)",
         "desde": DESDE,
         "n_partidos": n_part,
         "n_obs": int(len(y)),

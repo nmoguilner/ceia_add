@@ -1,5 +1,5 @@
 {
-  "fuente": "https://raw.githubusercontent.com/martj42/international_results/master/results.csv",
+  "fuente": "data/history.parquet (martj42/international_results)",
   "desde": "2023-01-01",
   "n_partidos": 435,
   "n_obs": 870,

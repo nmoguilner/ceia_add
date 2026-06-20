@@ -18,22 +18,23 @@ dilucion de regresion en el Apendice B). Luego se reajusta la regresion de
 Poisson de los goles sobre esa diferencia de ELO pre-partido.
 
 Salidas:
-  data/elo_reconstructed.csv   ELO reconstruido de las 48 selecciones (pre-Mundial)
+  data/elo_reconstructed.parquet  ELO reconstruido de las 48 selecciones (pre-Mundial)
   data/calibration_prematch.json   calibracion MLE con ELO pre-partido (sin proxy)
 
 Requiere numpy. Fuente del historico: github.com/martj42/international_results
 """
-import csv
 import json
 import os
 from collections import defaultdict
 
 import numpy as np
+import pyarrow as pa
+import pyarrow.parquet as pq
 
 import wcsim
 from calibrate import cargar_historico, poisson_irls, loglik, ALIAS, DESDE
 
-# Nombre en groups.csv (mi) -> nombre en el dataset (martj42)
+# Nombre en groups.parquet (mi) -> nombre en el dataset (martj42)
 MI_A_DATASET = {
     "USA": "United States",
     "Turkiye": "Turkey",
@@ -73,14 +74,11 @@ def reconstruir(filas):
     filas = sorted(filas, key=lambda r: r["date"])
     muestras = []  # (date, R_home_pre, R_away_pre, neutral, gh, ga)
     for r in filas:
-        if r["home_score"] in ("", "NA") or r["away_score"] in ("", "NA"):
+        if r["home_score"] is None or r["away_score"] is None:
             continue
-        try:
-            gh, ga = int(r["home_score"]), int(r["away_score"])
-        except ValueError:
-            continue
+        gh, ga = int(r["home_score"]), int(r["away_score"])
         h, a = r["home_team"], r["away_team"]
-        neutral = r["neutral"].strip().upper() == "TRUE"
+        neutral = bool(r["neutral"])
         rh, ra = R[h], R[a]
         muestras.append((r["date"], rh, ra, neutral, gh, ga))
         # actualizacion ELO
@@ -111,8 +109,9 @@ def main():
         else:
             faltan.append((team, dsname))
     rec_rows.sort(key=lambda x: -x[1])
-    with open(os.path.join(here, "data", "elo_reconstructed.csv"), "w", newline="", encoding="utf-8") as f:
-        w = csv.writer(f); w.writerow(["team", "elo"]); w.writerows(rec_rows)
+    pq.write_table(
+        pa.table({"team": [t for t, _ in rec_rows], "elo": [e for _, e in rec_rows]}),
+        os.path.join(here, "data", "elo_reconstructed.parquet"))
     if faltan:
         print("  OJO sin match en dataset:", faltan)
     rec = np.array([p[0] for p in corr_pairs]); cur = np.array([p[1] for p in corr_pairs])
@@ -151,7 +150,7 @@ def main():
     }
     with open(os.path.join(here, "data", "calibration_prematch.json"), "w", encoding="utf-8") as f:
         json.dump(out, f, indent=2, ensure_ascii=False)
-    print("\nEscrito data/elo_reconstructed.csv y data/calibration_prematch.json")
+    print("\nEscrito data/elo_reconstructed.parquet y data/calibration_prematch.json")
 
 
 if __name__ == "__main__":

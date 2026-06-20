@@ -62,11 +62,16 @@ def main():
             print(f"    {r['team']:<24}{r['titles']:>8,}  {r['p_champion']*100:>7.3f}%")
 
     if args.out:
-        with open(args.out, "w", newline="", encoding="utf-8") as f:
-            w = csv.DictWriter(f, fieldnames=["team", "elo", "titles", "p_champion",
-                                              "finals", "p_final", "semis", "p_semi"])
-            w.writeheader()
-            w.writerows(results)
+        cols = ["team", "elo", "titles", "p_champion", "finals", "p_final", "semis", "p_semi"]
+        if args.out.endswith(".parquet"):
+            import pyarrow as pa
+            import pyarrow.parquet as pq
+            pq.write_table(pa.table({c: [r[c] for r in results] for c in cols}), args.out)
+        else:
+            with open(args.out, "w", newline="", encoding="utf-8") as f:
+                w = csv.DictWriter(f, fieldnames=cols)
+                w.writeheader()
+                w.writerows(results)
         print(f"\nResultados completos escritos en {args.out}", file=sys.stderr)
 
 

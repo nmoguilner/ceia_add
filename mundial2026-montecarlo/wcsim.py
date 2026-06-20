@@ -15,7 +15,6 @@ Solo usa la biblioteca estandar de Python (sin numpy/pandas), en linea con la
 filosofia del proyecto montecarlo-calc.
 """
 
-import csv
 import json
 import math
 import os
@@ -33,35 +32,31 @@ def _data_dir(base=None):
     return os.path.join(base, "data")
 
 
+def read_parquet(path):
+    """Lee un Parquet como lista de dicts (tipos nativos de Python)."""
+    import pyarrow.parquet as pq
+    return pq.read_table(path).to_pylist()
+
+
 def load_elo(path):
-    elo = {}
-    with open(path, newline="", encoding="utf-8") as f:
-        for row in csv.DictReader(f):
-            elo[row["team"]] = float(row["elo"])
-    return elo
+    return {r["team"]: float(r["elo"]) for r in read_parquet(path)}
 
 
 def load_groups(path):
     groups = {}
-    with open(path, newline="", encoding="utf-8") as f:
-        for row in csv.DictReader(f):
-            g = row["group"]
-            groups.setdefault(g, []).append({
-                "team": row["team"],
-                "played": int(row["played"]),
-                "pts": int(row["pts"]),
-                "gf": int(row["gf"]),
-                "ga": int(row["ga"]),
-            })
+    for r in read_parquet(path):
+        groups.setdefault(r["group"], []).append({
+            "team": r["team"],
+            "played": int(r["played"]),
+            "pts": int(r["pts"]),
+            "gf": int(r["gf"]),
+            "ga": int(r["ga"]),
+        })
     return groups
 
 
 def load_fixtures(path):
-    fx = []
-    with open(path, newline="", encoding="utf-8") as f:
-        for row in csv.DictReader(f):
-            fx.append((row["group"], row["home"], row["away"]))
-    return fx
+    return [(r["group"], r["home"], r["away"]) for r in read_parquet(path)]
 
 
 def load_bracket(path):
@@ -72,9 +67,9 @@ def load_bracket(path):
 def load_all(base=None):
     d = _data_dir(base)
     return {
-        "elo": load_elo(os.path.join(d, "elo.csv")),
-        "groups": load_groups(os.path.join(d, "groups.csv")),
-        "fixtures": load_fixtures(os.path.join(d, "fixtures.csv")),
+        "elo": load_elo(os.path.join(d, "elo.parquet")),
+        "groups": load_groups(os.path.join(d, "groups.parquet")),
+        "fixtures": load_fixtures(os.path.join(d, "fixtures.parquet")),
         "bracket": load_bracket(os.path.join(d, "bracket.json")),
     }
 

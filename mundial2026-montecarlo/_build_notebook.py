@@ -70,19 +70,20 @@ cuantificación rigurosa del error de Monte Carlo, análisis de convergencia y d
 # ===========================================================================
 md(r"""## 2. Datos
 
-Se emplean cuatro insumos (directorio `data/`), correspondientes a un *snapshot* del torneo
-tomado alrededor del **20 de junio de 2026**:
+Se emplean los siguientes insumos (directorio `data/`, en formato **Parquet**), correspondientes
+a un *snapshot* del torneo tomado alrededor del **20 de junio de 2026**:
 
 | Insumo | Descripción | Fuente |
 |--------|-------------|--------|
-| `elo.csv`      | Rating Elo de las 48 selecciones (escala clásica) | worldfootballrankings [7] |
-| `groups.csv`   | Posiciones actuales de los 12 grupos (PJ, Pts, GF, GC) | CBS Sports [10], NBC Sports [11] |
-| `fixtures.csv` | Partidos de grupo aún no disputados | CBS Sports [10] |
-| `bracket.json` | Plantilla oficial de la Ronda de 32 y llave hasta la final | worldcuppass [12] |
+| `elo.parquet`      | Rating Elo de las 48 selecciones (escala clásica) | worldfootballrankings [7] |
+| `groups.parquet`   | Posiciones actuales de los 12 grupos (PJ, Pts, GF, GC) | CBS Sports [10], NBC Sports [11] |
+| `fixtures.parquet` | Partidos de grupo aún no disputados | CBS Sports [10] |
+| `bracket.json`     | Plantilla oficial de la Ronda de 32 y llave hasta la final | worldcuppass [12] |
+| `history.parquet`  | 49.477 partidos internacionales (1872–2026), para la calibración | martj42 [14] |
 
-Trece selecciones menores sin Elo publicado en la misma escala reciben un valor **estimado**
-(columna `fuente` en `elo.csv`); el impacto de esta aproximación sobre las favoritas es
-despreciable (Sección 5).""")
+Las fuentes editables a mano viven en `data/sources/*.csv` y se convierten a Parquet con
+`convert_to_parquet.py`. Trece selecciones menores sin Elo publicado en la misma escala reciben
+un valor **estimado** (columna `fuente`); el impacto sobre las favoritas es despreciable (Sección 5).""")
 
 code(r"""import time, math, random
 import numpy as np
@@ -438,7 +439,7 @@ y la grilla eliminatoria oficial completa. Sobre $10^{6}$ réplicas, **Argentina
 **Francia ($25{,}7\%$)**, **España ($14{,}3\%$)** e **Inglaterra ($12{,}0\%$)** son las
 principales candidatas, con errores de Monte Carlo despreciables y un ordenamiento robusto a la
 ventaja de localía. El marco es transparente, reproducible y fácilmente actualizable a medida
-que avanza el torneo (basta editar `groups.csv` y `fixtures.csv`). Una calibración por máxima
+que avanza el torneo (editar `data/sources/groups.csv` y `fixtures.csv` y correr `convert_to_parquet.py`). Una calibración por máxima
 verosimilitud sobre datos históricos (**Apéndices B y C**) indica que estas cifras **sobreestiman
 a las favoritas**: con parámetros estimados de los datos —y un Elo pre-partido reconstruido que
 elimina el proxy— el modelo es más plano y competitivo (Argentina $\approx 19{-}20\%$), con la
@@ -607,7 +608,7 @@ $49\,437$ partidos del histórico [14]. Luego se reajusta la regresión de Poiss
 **diferencia de Elo pre-partido** (script `elo_history.py`).""")
 
 code(r"""# Figura C1 — validacion: ELO reconstruido vs worldfootballrankings (las 48)
-rec = pd.read_csv("data/elo_reconstructed.csv").set_index("team")["elo"]
+rec = pd.read_parquet("data/elo_reconstructed.parquet").set_index("team")["elo"]
 cur = pd.Series(elo, name="wfr")
 J = pd.concat([rec.rename("rec"), cur], axis=1).dropna()
 r = J["rec"].corr(J["wfr"])
@@ -619,7 +620,7 @@ ax.plot(xs, m*xs + c, color="grey", ls="--", lw=1.2, label=f"ajuste (pendiente {
 for t in ["Argentina","France","Spain","Brazil","USA","Mexico"]:
     if t in J.index:
         ax.annotate(t, (J.loc[t,"wfr"], J.loc[t,"rec"]), textcoords="offset points", xytext=(4,3), fontsize=8)
-ax.set_xlabel("Elo worldfootballrankings (elo.csv)"); ax.set_ylabel("Elo reconstruido (eloratings)")
+ax.set_xlabel("Elo worldfootballrankings (elo.parquet)"); ax.set_ylabel("Elo reconstruido (eloratings)")
 ax.set_title(f"Figura C1. Validación de la reconstrucción (r = {r:.3f})"); ax.legend(loc="upper left")
 plt.tight_layout(); plt.savefig("charts/11_elo_reconstruido.png", bbox_inches="tight"); plt.show()""")
 

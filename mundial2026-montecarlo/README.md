@@ -16,10 +16,13 @@ toda la llave de eliminación) y se cuenta cuántas veces gana cada equipo.
 
 ## Uso
 
+Los datos están en **Parquet**, así que el motor requiere `pyarrow` (vía `uv`); se corre con `uv run`:
+
 ```bash
-python3 run.py                       # 20.000 simulaciones (por defecto)
-python3 run.py -n 100000 --seed 2026 # más simulaciones = menos ruido de muestreo
-python3 run.py -n 50000 --out resultados.csv --top 30
+uv sync                                  # instala pyarrow (dependencia del motor)
+uv run python run.py                     # 20.000 simulaciones (por defecto)
+uv run python run.py -n 100000 --seed 2026   # más simulaciones = menos ruido
+uv run python run.py -n 50000 --out resultados.parquet --top 30
 ```
 
 Opciones:
@@ -30,7 +33,7 @@ Opciones:
 | `--seed`     | semilla del RNG (reproducibilidad) | aleatoria |
 | `--base`     | goles esperados base por equipo | `1.35` |
 | `--home-adv` | bonus de ELO por localía (sedes USA/México/Canadá) | `60` |
-| `--out`      | CSV con los resultados completos | — |
+| `--out`      | volcado de resultados (`.parquet` o `.csv` según extensión) | — |
 | `--top`      | cuántas selecciones mostrar en pantalla | `20` |
 
 ---
@@ -65,17 +68,29 @@ probabilidad derivada del ELO.
 
 ---
 
-## Datos (`data/`)
+## Datos (`data/`) — formato Parquet
 
 | archivo | contenido |
 |---------|-----------|
-| `elo.csv`      | ELO de las 48 selecciones (escala clásica de worldfootballrankings; los equipos sin dato público están marcados `estimado`) |
-| `groups.csv`   | snapshot de los 12 grupos: partidos jugados, puntos, GF, GA |
-| `fixtures.csv` | partidos de grupo que **faltan** jugar |
-| `bracket.json` | plantilla oficial de la Ronda de 32 y el árbol hasta la final |
+| `elo.parquet`      | ELO de las 48 selecciones (escala clásica de worldfootballrankings; los sin dato público marcados `estimado`) |
+| `groups.parquet`   | snapshot de los 12 grupos: partidos jugados, puntos, GF, GA |
+| `fixtures.parquet` | partidos de grupo que **faltan** jugar |
+| `history.parquet`  | 49.477 partidos internacionales 1872–2026 (calibración; fuente martj42) |
+| `bracket.json`     | plantilla oficial de la Ronda de 32 y el árbol hasta la final |
+| `calibration*.json` | parámetros estimados (Apéndices B y C) |
 
-Para **actualizar** la simulación a medida que avanza el Mundial: editá `groups.csv`
-(puntos/goles) y sacá de `fixtures.csv` los partidos ya jugados. El modelo se adapta solo.
+Los datos canónicos son **Parquet** (lo que lee el código). Las fuentes **editables a mano**
+viven en `data/sources/*.csv`; tras editarlas se regeneran los Parquet:
+
+```bash
+uv run python convert_to_parquet.py     # data/sources/*.csv + histórico → data/*.parquet
+```
+
+Para **actualizar** el Mundial: editá `data/sources/groups.csv` (puntos/goles) y sacá de
+`fixtures.csv` los partidos ya jugados, y volvé a correr `convert_to_parquet.py`.
+
+> **Nota:** como Parquet no tiene lector en la biblioteca estándar, el motor `wcsim.py` ahora
+> depende de `pyarrow` (antes era stdlib puro). Se corre con `uv run python ...`.
 
 **Fuentes del snapshot (≈ 20-jun-2026):** tablas de [CBS Sports](https://www.cbssports.com/soccer/news/world-cup-group-standings-table-results/)
 y [NBC Sports](https://www.nbcsports.com/soccer/news/2026-world-cup-group-stage-table-full-standings-for-all-12-groups);
@@ -101,7 +116,7 @@ bracket de [worldcuppass.com](https://worldcuppass.com/world-cup-2026-round-of-3
 | 11 | Mexico | 1722 | 1.3 % | 4.6 % | 16.1 % |
 
 En total **33 selecciones** salieron campeonas en al menos un escenario. El detalle
-completo de las 48 (campeón / final / semi) está en [`resultados_1M.csv`](resultados_1M.csv).
+completo de las 48 (campeón / final / semi) está en [`resultados_1M.parquet`](resultados_1M.parquet).
 La columna `P(semi)` deja a la vista que la **grilla de eliminatorias completa** (Ronda de
 32 → octavos → cuartos → semi → final) entra en el cómputo, no solo la final.
 
@@ -124,9 +139,9 @@ uv sync --extra notebook         # instala matplotlib/pandas/jupyter (solo para 
 uv run --extra notebook jupyter lab mundial2026.ipynb
 ```
 
-> El **motor** (`wcsim.py`) sigue siendo stdlib puro; estas dependencias son solo para la
-> presentación. El entorno queda fijado en `uv.lock`. Para regenerar el notebook desde cero:
-> `uv run --extra notebook python _build_notebook.py`.
+> El **motor** (`wcsim.py`) solo depende de `pyarrow` (lectura de Parquet); matplotlib/pandas/jupyter
+> son del extra `notebook`. El entorno queda fijado en `uv.lock`. Para regenerar el notebook desde
+> cero: `uv run --extra notebook python _build_notebook.py`.
 
 ### Figuras
 
@@ -159,7 +174,7 @@ una **regresión de Poisson** de los goles contra la diferencia de ELO y un indi
 
 ```bash
 uv run --extra notebook python calibrate.py     # ajusta y escribe data/calibration.json
-python3 run.py -n 1000000 --seed 2026 --calibrated   # 1M con el modelo calibrado
+uv run python run.py -n 1000000 --seed 2026 --calibrated   # 1M con el modelo calibrado
 ```
 
 | Parámetro | A mano | **MLE** |
@@ -186,7 +201,7 @@ reconstruye el ELO al momento de cada partido corriendo el algoritmo oficial elo
 de ELO **pre-partido** (3.630 partidos, todas las selecciones).
 
 ```bash
-uv run --extra notebook python elo_history.py   # -> data/elo_reconstructed.csv + calibration_prematch.json
+uv run --extra notebook python elo_history.py   # -> data/elo_reconstructed.parquet + calibration_prematch.json
 ```
 
 | Parámetro | A mano | Proxy (B) | **Pre-partido (C)** |
@@ -213,4 +228,4 @@ estimada mayor (h≈127) que eleva a USA como anfitrión (~12 %).
 - Goles modelados como Poisson **independientes** (sin correlación ni efecto de marcador).
 - La asignación de terceros usa un matching válido respetando los grupos admitidos,
   no la tabla FIFA exacta de 495 combinaciones (efecto de segundo orden sobre el campeón).
-- Algunos ELO de selecciones menores están **estimados** (ver columna `fuente` en `elo.csv`).
+- Algunos ELO de selecciones menores están **estimados** (ver columna `fuente` en `elo.parquet` / `data/sources/elo.csv`).
