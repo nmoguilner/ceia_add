@@ -42,6 +42,13 @@ def convertir_fuentes():
     _write(g, "groups.parquet")
     # fixtures
     _write(pd.read_csv(os.path.join(SRC, "fixtures.csv")), "fixtures.parquet")
+    # played (partidos ya disputados, para backtest)
+    played_csv = os.path.join(SRC, "played.csv")
+    if os.path.exists(played_csv):
+        p = pd.read_csv(played_csv)
+        for c in ["gh", "ga"]:
+            p[c] = p[c].astype("int64")
+        _write(p, "played.parquet")
 
 
 def convertir_historico():

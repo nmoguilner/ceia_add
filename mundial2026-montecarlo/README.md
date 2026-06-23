@@ -76,6 +76,7 @@ probabilidad derivada del ELO.
 | `groups.parquet`   | snapshot de los 12 grupos: partidos jugados, puntos, GF, GA |
 | `fixtures.parquet` | partidos de grupo que **faltan** jugar |
 | `history.parquet`  | 49.477 partidos internacionales 1872–2026 (calibración; fuente martj42) |
+| `played.parquet`   | partidos del Mundial 2026 ya disputados (backtest, Apéndice D) |
 | `bracket.json`     | plantilla oficial de la Ronda de 32 y el árbol hasta la final |
 | `calibration*.json` | parámetros estimados (Apéndices B y C) |
 
@@ -86,36 +87,38 @@ viven en `data/sources/*.csv`; tras editarlas se regeneran los Parquet:
 uv run python convert_to_parquet.py     # data/sources/*.csv + histórico → data/*.parquet
 ```
 
-Para **actualizar** el Mundial: editá `data/sources/groups.csv` (puntos/goles) y sacá de
-`fixtures.csv` los partidos ya jugados, y volvé a correr `convert_to_parquet.py`.
+Para **actualizar** el Mundial: editá `data/sources/groups.csv` (puntos/goles), sacá de
+`fixtures.csv` los partidos ya jugados, agregalos a `played.csv` (para el backtest), y volvé a
+correr `convert_to_parquet.py`.
 
 > **Nota:** como Parquet no tiene lector en la biblioteca estándar, el motor `wcsim.py` ahora
 > depende de `pyarrow` (antes era stdlib puro). Se corre con `uv run python ...`.
 
-**Fuentes del snapshot (≈ 20-jun-2026):** tablas de [CBS Sports](https://www.cbssports.com/soccer/news/world-cup-group-standings-table-results/)
-y [NBC Sports](https://www.nbcsports.com/soccer/news/2026-world-cup-group-stage-table-full-standings-for-all-12-groups);
+**Fuentes del snapshot (≈ 23-jun-2026, tras jornada 2 de grupos E-J):** tablas de [ESPN](https://www.espn.com/soccer/story/_/id/48939282/2026-fifa-world-cup-fixtures-results-match-schedule-group-stage-knockout-rounds-bracket),
+[CBS Sports](https://www.cbssports.com/soccer/news/world-cup-group-standings-table-results/) y
+[NBC Sports](https://www.nbcsports.com/soccer/news/2026-world-cup-group-stage-table-full-standings-for-all-12-groups);
 ELO de [worldfootballrankings.com](https://worldfootballrankings.com/rankings);
 bracket de [worldcuppass.com](https://worldcuppass.com/world-cup-2026-round-of-32/).
 
 ---
 
-## Resultado (1.000.000 de escenarios, `--seed 2026`)
+## Resultado (1.000.000 de escenarios, `--seed 2026`, snapshot 23-jun post-M2)
 
 | # | Selección | ELO | P(campeón) | P(final) | P(semi) |
 |---|-----------|-----|-----------:|---------:|--------:|
-| 1 | Argentina | 1889 | **28.6 %** | 46.7 % | 68.0 % |
-| 2 | France | 1887 | **25.7 %** | 43.3 % | 62.2 % |
-| 3 | Spain | 1856 | **14.3 %** | 26.2 % | 47.5 % |
-| 4 | England | 1848 | **12.0 %** | 23.4 % | 44.7 % |
-| 5 | USA | 1710 | 3.8 % | 10.2 % | 27.5 % |
-| 6 | Morocco | 1770 | 3.0 % | 8.2 % | 20.2 % |
-| 7 | Brazil | 1772 | 2.9 % | 8.1 % | 19.7 % |
-| 8 | Portugal | 1755 | 2.1 % | 6.0 % | 15.5 % |
-| 9 | Netherlands | 1764 | 2.0 % | 5.6 % | 13.5 % |
-| 10 | Germany | 1744 | 1.4 % | 4.5 % | 11.7 % |
-| 11 | Mexico | 1722 | 1.3 % | 4.6 % | 16.1 % |
+| 1 | Argentina | 1889 | **30.3 %** | 49.3 % | 72.8 % |
+| 2 | France | 1887 | **24.5 %** | 41.9 % | 60.3 % |
+| 3 | Spain | 1856 | **14.4 %** | 26.3 % | 50.1 % |
+| 4 | England | 1848 | **11.9 %** | 23.6 % | 44.4 % |
+| 5 | USA | 1710 | 3.7 % | 9.9 % | 28.1 % |
+| 6 | Morocco | 1770 | 3.0 % | 8.4 % | 20.9 % |
+| 7 | Brazil | 1772 | 2.9 % | 8.3 % | 20.3 % |
+| 8 | Netherlands | 1764 | 2.1 % | 6.1 % | 14.6 % |
+| 9 | Portugal | 1755 | 1.9 % | 5.5 % | 14.6 % |
+| 10 | Germany | 1744 | 1.4 % | 4.7 % | 11.8 % |
+| 11 | Mexico | 1722 | 1.2 % | 4.7 % | 16.2 % |
 
-En total **33 selecciones** salieron campeonas en al menos un escenario. El detalle
+En total **34 selecciones** salieron campeonas en al menos un escenario. El detalle
 completo de las 48 (campeón / final / semi) está en [`resultados_1M.parquet`](resultados_1M.parquet).
 La columna `P(semi)` deja a la vista que la **grilla de eliminatorias completa** (Ronda de
 32 → octavos → cuartos → semi → final) entra en el cómputo, no solo la final.
@@ -219,6 +222,35 @@ estimada mayor (h≈127) que eleva a USA como anfitrión (~12 %).
 ![Validación del ELO reconstruido (r=0.92)](charts/11_elo_reconstruido.png)
 
 ![Las tres calibraciones](charts/12_calibraciones.png)
+
+### Apéndice D — backtest vivo (calidad predictiva por vuelta)
+
+Sobre los partidos del propio Mundial ya disputados se computan las probabilidades $\hat{p}$(H/E/A)
+analíticamente con el Elo previo y se contrastan con el resultado real mediante **acierto, Brier
+(3-vía) y log-loss**. Es la prueba *fuera de muestra* que cierra el círculo de los Apéndices B/C.
+Script: [`backtest.py`](backtest.py) → tablas + figura de calibración (`charts/13_backtest_calibracion.png`).
+
+```bash
+uv run python backtest.py                              # tablas (baseline + calibrado)
+uv run --extra notebook python backtest.py --plot      # + figura de calibración
+```
+
+Sobre las **44 jornadas iniciales** (M1+M2 de A-D, M1+M2 de E-J, M1 de K-L):
+
+| Modelo | Acierto | Brier | logLoss |
+|---|---:|---:|---:|
+| Uniforme (referencia) | 33 % | 0.667 | 1.099 |
+| Frecuencia base | 52 % | 0.606 | 1.009 |
+| **Baseline a mano** | **61 %** | **0.502** | **0.848** |
+| **Calibrado (MLE, Ap. B)** | **61 %** | **0.497** | **0.845** |
+
+El modelo le saca 0.10 al Brier de la frecuencia base — el contenido del Elo agrega valor real. El
+calibrado castiga **menos los empates inesperados** (España 0-0 Cabo Verde: log-loss baja de 3.65
+a 2.03), coherente con la **escala más plana** del Apéndice B. Las cinco peores predicciones son
+todas empates de favoritos: la independencia Poisson subestima la masa del empate cuando hay
+desnivel grande — es exactamente lo que ataca la corrección Dixon–Coles pendiente.
+
+![Calibración del modelo: probabilidad predicha vs frecuencia observada](charts/13_backtest_calibracion.png)
 
 ---
 

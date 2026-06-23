@@ -668,6 +668,159 @@ clasificatorias puede sobreestimar la del Mundial, más neutral. La calibración
 única extensión pendiente la dependencia de marcadores bajos de Dixon–Coles.""")
 
 # ===========================================================================
+# Apendice D — backtest vivo
+# ===========================================================================
+md(r"""## Apéndice D. Backtest vivo (calidad predictiva por vuelta)
+
+Las calibraciones de B y C ajustan los parámetros por verosimilitud sobre el histórico, pero el
+*test definitivo* es la calidad predictiva **fuera de muestra** sobre los partidos del propio
+torneo. Para cada partido ya disputado se computan analíticamente las probabilidades
+$\mathrm{P}(\text{H}), \mathrm{P}(\text{E}), \mathrm{P}(\text{A})$ por la Ec. (5) usando el Elo
+**previo al torneo** —es decir, *sin* ver el resultado— y se las contrasta con el desenlace real
+mediante tres métricas estándar:
+
+- **acierto:** fracción de partidos donde la clase más probable coincide con el resultado.
+- **Brier (3-vía):** $\mathrm{Br} = \sum_{c \in \{H,E,A\}} (\hat{p}_c - \mathbf{1}\{y=c\})^2$,
+  proper scoring rule que penaliza tanto la calibración como la resolución.
+- **log-loss:** $\ell = -\log \hat{p}_{y}$, asintóticamente equivalente a la verosimilitud.
+
+Las referencias son: predicción **uniforme** $(1/3,1/3,1/3)$ y predicción por **frecuencia base**
+(distribución empírica H/E/A del propio torneo). El bloque siguiente se vuelve a correr a medida
+que se agregan partidos a `data/sources/played.csv`, lo que convierte a este apéndice en una
+**bitácora viva** de la performance del modelo.""")
+
+code(r"""# Tabla D1 -- backtest por bloque de vuelta para los dos modelos
+import json
+
+played = pd.read_parquet("data/played.parquet")
+
+def _matchday(g, d):
+    if g in "ABCD":
+        return "M1" if d <= "2026-06-13" else "M2"
+    return "M1" if d <= "2026-06-17" else "M2"
+
+def _bloque(g, md):
+    if md == "M1" and g in "ABCD": return "M1 grupos A-D"
+    if md == "M1":                 return "M1 grupos E-L"
+    if g in "ABCD":                return "M2 grupos A-D"
+    return "M2 grupos E-J"
+
+def _evaluar(model):
+    out = []
+    for _, r in played.iterrows():
+        p_h, p_d, p_a = wdl(r["home"], r["away"], model)
+        gh, ga = int(r["gh"]), int(r["ga"])
+        if gh > ga:   y, p_y, obs = "H", p_h, (1,0,0)
+        elif ga > gh: y, p_y, obs = "A", p_a, (0,0,1)
+        else:         y, p_y, obs = "E", p_d, (0,1,0)
+        brier = sum((p - o)**2 for p, o in zip((p_h, p_d, p_a), obs))
+        pred = max(["H","E","A"], key=lambda c: {"H":p_h,"E":p_d,"A":p_a}[c])
+        md_ = _matchday(r["group"], r["date"])
+        out.append({"bloque": _bloque(r["group"], md_), "p_h": p_h, "p_d": p_d, "p_a": p_a,
+                    "y": y, "correct": int(pred == y), "brier": brier,
+                    "logl": -math.log(max(p_y, 1e-9))})
+    return pd.DataFrame(out)
+
+cal = json.load(open("data/calibration.json"))
+model_base = wcsim.MatchModel(elo, base=1.35, home_adv=60.0, scale=800.0)
+model_cal  = wcsim.MatchModel(elo, base=cal["mu"], home_adv=cal["home_adv_elo"], scale=cal["escala"])
+bt_b = _evaluar(model_base); bt_c = _evaluar(model_cal)
+
+def _agg(df):
+    return pd.Series({"N": len(df), "acierto": df["correct"].mean(),
+                      "Brier": df["brier"].mean(), "logLoss": df["logl"].mean()})
+orden = ["M1 grupos A-D", "M1 grupos E-L", "M2 grupos A-D", "M2 grupos E-J"]
+tD = pd.concat([
+    bt_b.groupby("bloque").apply(_agg).reindex(orden),
+    pd.DataFrame([_agg(bt_b)], index=["TOTAL"]),
+])
+tD_c = pd.concat([
+    bt_c.groupby("bloque").apply(_agg).reindex(orden),
+    pd.DataFrame([_agg(bt_c)], index=["TOTAL"]),
+])
+
+# Referencias
+n = len(bt_b)
+fH = (bt_b["y"]=="H").mean(); fE = (bt_b["y"]=="E").mean(); fA = (bt_b["y"]=="A").mean()
+brier_freq = sum(fz * ((1-fz)**2 + sum(fy**2 for fy in (fH,fE,fA) if fy != fz))
+                 for fz in (fH, fE, fA))
+logl_freq  = -sum(fz * math.log(max(fz,1e-9)) for fz in (fH, fE, fA))
+ref = pd.DataFrame([
+    {"N": n, "acierto": np.nan, "Brier": 2/3,        "logLoss": math.log(3)},
+    {"N": n, "acierto": max(fH,fE,fA), "Brier": brier_freq, "logLoss": logl_freq},
+], index=["referencia uniforme", "referencia frec. base"])
+
+display(tD.style.format({"N":"{:.0f}","acierto":"{:.1%}","Brier":"{:.3f}","logLoss":"{:.3f}"})
+        .set_caption(f"Tabla D1a. Backtest del modelo BASELINE (a mano) sobre {n} partidos."))
+display(tD_c.style.format({"N":"{:.0f}","acierto":"{:.1%}","Brier":"{:.3f}","logLoss":"{:.3f}"})
+        .set_caption(f"Tabla D1b. Backtest del modelo CALIBRADO (MLE, Ap. B)."))
+display(ref.style.format({"N":"{:.0f}","acierto":"{:.1%}","Brier":"{:.3f}","logLoss":"{:.3f}"})
+        .set_caption(f"Tabla D1c. Referencias (sin contenido informativo del Elo). "
+                     f"Frecuencia empírica: H={fH:.0%}, E={fE:.0%}, A={fA:.0%}."))""")
+
+code(r"""# Figura D1 -- calibracion: probabilidad predicha vs frecuencia observada (bins de 0.2)
+def _bins(df, k=5):
+    pares = []
+    for _, r in df.iterrows():
+        for p, c in [(r["p_h"],"H"), (r["p_d"],"E"), (r["p_a"],"A")]:
+            pares.append((p, int(r["y"] == c)))
+    edges = np.linspace(0, 1, k+1)
+    rows = []
+    for i in range(k):
+        sub = [(p, y) for p, y in pares if (edges[i] <= p < edges[i+1]) or (i == k-1 and p == 1.0)]
+        if not sub: continue
+        ps = [p for p,_ in sub]; ys = [y for _,y in sub]
+        rows.append({"mean_p": np.mean(ps), "freq": np.mean(ys), "n": len(sub)})
+    return pd.DataFrame(rows)
+
+bB = _bins(bt_b); bC = _bins(bt_c)
+fig, ax = plt.subplots(figsize=(6.2, 5.6))
+ax.plot([0,1], [0,1], "k--", lw=1, label="Calibración perfecta")
+for tag, b, col in [("baseline (a mano)", bB, "#1f77b4"), ("calibrado (MLE)", bC, "#ff7f0e")]:
+    ax.scatter(b["mean_p"], b["freq"], s=[max(40, 6*n) for n in b["n"]],
+               alpha=0.55, color=col, edgecolor="black", linewidth=0.5, label=tag)
+    ax.plot(b["mean_p"], b["freq"], color=col, alpha=0.55, lw=1.2)
+ax.set_xlim(0,1); ax.set_ylim(0,1)
+ax.set_xlabel("Probabilidad predicha (media del bin)")
+ax.set_ylabel("Frecuencia observada en el bin")
+ax.set_title(f"Figura D1. Calibración sobre {3*n} pares (H/E/A) — tamaño = #predicciones")
+ax.legend(loc="upper left", fontsize=9); ax.grid(alpha=0.3)
+plt.tight_layout(); plt.savefig("charts/13_backtest_calibracion.png", bbox_inches="tight"); plt.show()""")
+
+code(r"""# Tabla D2 -- top-5 mejores y peores predicciones (baseline)
+bt_b_full = bt_b.copy()
+bt_b_full["partido"] = (played["home"] + " " + played["gh"].astype(str)
+                        + "-" + played["ga"].astype(str) + " " + played["away"]).values
+bt_b_full["P(H/E/A) %"] = [f"{100*r.p_h:.0f}/{100*r.p_d:.0f}/{100*r.p_a:.0f}"
+                            for r in bt_b.itertuples()]
+cols = ["partido", "y", "P(H/E/A) %", "logl"]
+mejores = bt_b_full.nsmallest(5, "logl")[cols].rename(columns={"y":"real","logl":"logLoss"})
+peores  = bt_b_full.nlargest(5, "logl")[cols].rename(columns={"y":"real","logl":"logLoss"})
+display(mejores.style.format({"logLoss":"{:.2f}"}).hide(axis="index")
+        .set_caption("Tabla D2a. Top-5 mejores predicciones del baseline."))
+display(peores.style.format({"logLoss":"{:.2f}"}).hide(axis="index")
+        .set_caption("Tabla D2b. Top-5 sorpresas del baseline."))""")
+
+md(r"""**Lectura.** *(Las cifras se recalculan al ejecutar el notebook; lo que sigue refleja la
+corrida actual.)* El modelo a-mano agrega **valor predictivo real**: su Brier (≈ 0,50) está
+clavado entre la referencia uniforme (0,67) y la frecuencia base del propio torneo (≈ 0,61), y
+acierta la clase modal en **6 de cada 10 partidos** (vs 33% al azar). La métrica mejora marcada
+en M2 vs M1 —los favoritos *se enchufaron* en la segunda fecha—, y las **cinco peores
+predicciones son todas empates** de favoritos que no concretaron (España–Cabo Verde 0–0,
+Portugal–DR Congo 1–1, Ecuador–Curaçao 0–0, etc.): el modelo Poisson independiente **subestima
+sistemáticamente la masa del empate** cuando hay desnivel grande, lo que es exactamente la falla
+que ataca la corrección de Dixon–Coles ($\rho < 0$ para marcadores bajos) pendiente.
+
+El **modelo calibrado** mejora el Brier (≈ 0,497 vs 0,502) y el log-loss agregado, con la mejora
+concentrada justo en los empates inesperados: en España–Cabo Verde el log-loss cae de $3{,}65$
+a $2{,}03$. Esto es coherente con el hallazgo de los Apéndices B/C: una escala más plana comprime
+los extremos, reduciendo el castigo cuando una favorita no convierte. En la **calibración por
+bins** (Figura D1) ambos modelos quedan razonablemente cerca de la diagonal; el baseline tiende
+a ser apenas *bajo-confidente* en el extremo alto y el calibrado *sobre-confidente* en el extremo
+bajo. Con $n=44$ partidos las dispersiones por bin son aún grandes —el apéndice se vuelve más
+informativo a medida que avanza el torneo.""")
+
+# ===========================================================================
 # Reproducibilidad + Referencias
 # ===========================================================================
 md(r"""## Reproducibilidad
