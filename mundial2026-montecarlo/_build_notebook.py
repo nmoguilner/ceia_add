@@ -1,10 +1,72 @@
 """Genera mundial2026.ipynb en formato paper academico. Auxiliar (regenerable)."""
+import os as _os
+
 import nbformat as nbf
+import pandas as _pd
 
 nb = nbf.v4.new_notebook()
 cells = []
 
+# ---------------------------------------------------------------------------
+# Cifras dinamicas de la prosa. Se leen del resultado canonico
+# (resultados_1M.parquet) y del estado de los datos, y se inyectan en el texto
+# del paper via tokens @...@ al regenerar. Asi el relato se actualiza solo tras
+# cada jornada (editar CSV -> convert_to_parquet -> run.py -> _build_notebook),
+# sin numeros hardcodeados que queden desfasados.
+# ---------------------------------------------------------------------------
+_HERE = _os.path.dirname(_os.path.abspath(__file__))
+
+
+def _path(*a):
+    return _os.path.join(_HERE, *a)
+
+
+_res = (_pd.read_parquet(_path("resultados_1M.parquet"))
+        .sort_values("titles", ascending=False).reset_index(drop=True))
+
+
+def _pc(team):  # P(campeon) en %
+    return float(_res.loc[_res.team == team, "p_champion"].iloc[0]) * 100
+
+
+def _ps(team):  # P(semi) en %
+    return float(_res.loc[_res.team == team, "p_semi"].iloc[0]) * 100
+
+
+def _tex(x, dec=1):  # 30.1 -> "30{,}1" (coma decimal estilo LaTeX)
+    return f"{x:.{dec}f}".replace(".", "{,}")
+
+
+_MESES = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio",
+          "agosto", "septiembre", "octubre", "noviembre", "diciembre"]
+_grp = _pd.read_parquet(_path("data", "groups.parquet"))
+_fx = _pd.read_parquet(_path("data", "fixtures.parquet"))
+_pl = _pd.read_parquet(_path("data", "played.parquet"))
+_minpj, _maxpj = int(_grp.played.min()), int(_grp.played.max())
+_njug, _nrest = len(_pl), len(_fx)
+_y, _m, _d = str(_pl["date"].max()).split("-")
+_fecha_txt = f"{int(_d)} de {_MESES[int(_m) - 1]} de {_y}"
+if _nrest == 0:
+    _snap = f"al {_fecha_txt}, con la fase de grupos completa"
+elif _minpj == _maxpj:
+    _snap = (f"al {_fecha_txt}, con los 12 grupos habiendo disputado {_maxpj} de sus 3 "
+             f"fechas; {_njug} partidos de grupos jugados y {_nrest} por jugar")
+else:
+    _snap = (f"al {_fecha_txt}; {_njug} partidos de grupos jugados y {_nrest} por jugar")
+
+_top4 = _pc("Argentina") + _pc("France") + _pc("Spain") + _pc("England")
+SUBS = {
+    "@ARG@": _tex(_pc("Argentina")), "@FRA@": _tex(_pc("France")),
+    "@ESP@": _tex(_pc("Spain")), "@ENG@": _tex(_pc("England")),
+    "@MEX@": _tex(_pc("Mexico")), "@MEXSEMI@": _tex(_ps("Mexico"), 0),
+    "@TOP4@": _tex(_top4, 0), "@NCHAMP@": str(int((_res.titles > 0).sum())),
+    "@SNAPSHOT@": _snap,
+}
+
+
 def md(src):
+    for _k, _v in SUBS.items():
+        src = src.replace(_k, _v)
     cells.append(nbf.v4.new_markdown_cell(src))
 
 def code(src):
@@ -24,15 +86,15 @@ md(r"""# Estimación de probabilidades de campeonato del Mundial FIFA 2026 media
 
 Se estima la probabilidad de que cada una de las 48 selecciones se consagre campeona del
 Mundial FIFA 2026 mediante **simulación de Monte Carlo**, partiendo del estado del torneo en
-curso (mitad de la fase de grupos). Cada partido se modela con dos distribuciones de Poisson
+curso (@SNAPSHOT@). Cada partido se modela con dos distribuciones de Poisson
 independientes cuyas intensidades se derivan de la diferencia de **rating Elo** entre los
 contendientes, calibradas de modo que el cociente de goles esperados reproduzca la forma
 clásica del Elo. A partir del estado actual de los 12 grupos se simulan los encuentros
 restantes, la clasificación (dos primeros de cada grupo más los ocho mejores terceros) y la
 totalidad de la fase eliminatoria respetando la plantilla oficial de la Ronda de 32. Sobre
-$N=10^{6}$ réplicas independientes se obtiene que **Argentina** ($28{,}6\%$), **Francia**
-($25{,}7\%$), **España** ($14{,}3\%$) e **Inglaterra** ($12{,}0\%$) concentran cerca del
-$80\%$ de los títulos. Se reportan los **errores estándar de Monte Carlo** e
+$N=10^{6}$ réplicas independientes se obtiene que **Argentina** ($@ARG@\%$), **Francia**
+($@FRA@\%$), **España** ($@ESP@\%$) e **Inglaterra** ($@ENG@\%$) concentran cerca del
+$@TOP4@\%$ de los títulos. Se reportan los **errores estándar de Monte Carlo** e
 **intervalos de confianza del 95\%**, se verifica la **convergencia** del estimador y se
 analiza la **sensibilidad** a la ventaja de localía. La implementación del motor utiliza
 únicamente la biblioteca estándar de Python y es íntegramente reproducible (semilla fija,
@@ -395,13 +457,13 @@ display(sdf.style.format("{:.2%}").set_caption(
 md(r"""## 5. Discusión
 
 Los resultados ubican a **Argentina** y **Francia** netamente por encima del resto, seguidas
-por **España** e **Inglaterra**; las cuatro acumulan $\approx 80\%$ de los títulos, en línea
+por **España** e **Inglaterra**; las cuatro acumulan $\approx @TOP4@\%$ de los títulos, en línea
 con su Elo (las cuatro de mayor rating) y con el favoritismo del consenso futbolístico.
 **USA** supera lo que sugeriría su Elo puro porque juega de local en casi todo el cuadro —la
 final y las rondas desde cuartos se disputan íntegramente en EE. UU.— y por su llave favorable
 tras ganar el grupo. **México**, en cambio, alcanza con frecuencia las rondas intermedias —es
-local en sus sedes de la Ronda de 32 y octavos, con $P(\text{semi})\approx 16\%$ (Figura 4)—
-pero su probabilidad de título cae marcadamente ($\approx 1{,}3\%$) al perder la localía en las
+local en sus sedes de la Ronda de 32 y octavos, con $P(\text{semi})\approx @MEXSEMI@\%$ (Figura 4)—
+pero su probabilidad de título cae marcadamente ($\approx @MEX@\%$) al perder la localía en las
 rondas finales; este contraste es justamente lo que captura la localía **geográfica** y que un
 bonus incondicional ocultaría.
 
@@ -435,8 +497,8 @@ md(r"""## 6. Conclusiones
 
 Se estimaron, mediante simulación de Monte Carlo desde el estado actual del Mundial 2026, las
 probabilidades de campeonato de las 48 selecciones, integrando un modelo de partido Elo→Poisson
-y la grilla eliminatoria oficial completa. Sobre $10^{6}$ réplicas, **Argentina ($28{,}6\%$)**,
-**Francia ($25{,}7\%$)**, **España ($14{,}3\%$)** e **Inglaterra ($12{,}0\%$)** son las
+y la grilla eliminatoria oficial completa. Sobre $10^{6}$ réplicas, **Argentina ($@ARG@\%$)**,
+**Francia ($@FRA@\%$)**, **España ($@ESP@\%$)** e **Inglaterra ($@ENG@\%$)** son las
 principales candidatas, con errores de Monte Carlo despreciables y un ordenamiento robusto a la
 ventaja de localía. El marco es transparente, reproducible y fácilmente actualizable a medida
 que avanza el torneo (editar `data/sources/groups.csv` y `fixtures.csv` y correr `convert_to_parquet.py`). Una calibración por máxima
@@ -503,8 +565,8 @@ plt.tight_layout(); plt.savefig("charts/08_sensibilidad_goles.png", bbox_inches=
 
 md(r"""**Lectura.** El **ordenamiento** de las favoritas es robusto (las cuatro de cabeza no
 cambian de posición), pero las **magnitudes sí se mueven**: al acotar el total de goles, la
-probabilidad de título de Argentina y Francia cae varios puntos porcentuales (de $\approx 28{,}6\%$
-y $25{,}7\%$ hacia $\approx 24{-}25\%$ y $\approx 22{-}23\%$ con $T=2{,}7$) y se redistribuye
+probabilidad de título de Argentina y Francia cae varios puntos porcentuales (de $\approx @ARG@\%$
+y $@FRA@\%$ hacia $\approx 24{-}25\%$ y $\approx 22{-}23\%$ con $T=2{,}7$) y se redistribuye
 hacia el pelotón medio (USA, Brasil, Marruecos). El mecanismo: con menos goles en los partidos
 desparejos aumenta la **frecuencia de empates**, lo que —vía el sistema de 3-1-0 en la fase de
 grupos y los penales en la eliminatoria— erosiona la prima de los más fuertes y abre la puerta a
@@ -585,8 +647,8 @@ plt.tight_layout(); plt.savefig("charts/10_mle_vs_amano.png", bbox_inches="tight
 md(r"""**Lectura.** La calibración por datos arroja una escala **más plana** ($\approx 1280$ vs
 $800$): el goleo crece con la diferencia de Elo más lento de lo que asumía el baseline, es decir
 el baseline **sobreestima el dominio de los favoritos**. Al re-correr con el modelo calibrado, la
-probabilidad de título de las grandes cae con fuerza (Argentina $\approx 28{,}6\% \to 20\%$,
-Francia $\approx 25{,}7\% \to 19\%$) y se redistribuye al pelotón medio; USA sube además por la
+probabilidad de título de las grandes cae con fuerza (Argentina $\approx @ARG@\% \to 20\%$,
+Francia $\approx @FRA@\% \to 19\%$) y se redistribuye al pelotón medio; USA sube además por la
 localía estimada ($h\approx 87$). La **dirección** confirma el Apéndice A con datos reales; la
 **magnitud** debe leerse con cautela por la dilución del proxy —que el **Apéndice C** elimina
 reconstruyendo el Elo pre-partido histórico.""")
