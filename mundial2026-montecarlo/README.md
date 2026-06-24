@@ -102,21 +102,21 @@ bracket de [worldcuppass.com](https://worldcuppass.com/world-cup-2026-round-of-3
 
 ---
 
-## Resultado (1.000.000 de escenarios, `--seed 2026`, snapshot 23-jun — J2 de K/L en curso: Portugal 5-0 Uzbekistán, Inglaterra 0-0 Ghana)
+## Resultado (1.000.000 de escenarios, `--seed 2026`, snapshot 24-jun — los 12 grupos con 2 fechas jugadas; restan las terceras fechas)
 
 | # | Selección | ELO | P(campeón) | P(final) | P(semi) |
 |---|-----------|-----|-----------:|---------:|--------:|
-| 1 | Argentina | 1889 | **30.2 %** | 48.9 % | 72.3 % |
-| 2 | France | 1887 | **24.6 %** | 42.2 % | 60.4 % |
-| 3 | Spain | 1856 | **14.3 %** | 25.9 % | 49.3 % |
-| 4 | England | 1848 | **11.7 %** | 23.2 % | 43.7 % |
-| 5 | USA | 1710 | 3.7 % | 9.8 % | 27.9 % |
-| 6 | Brazil | 1772 | 3.0 % | 8.5 % | 20.6 % |
-| 7 | Morocco | 1770 | 3.0 % | 8.6 % | 21.3 % |
-| 8 | Netherlands | 1764 | 2.1 % | 6.2 % | 14.7 % |
-| 9 | Portugal | 1755 | 2.0 % | 6.0 % | 15.9 % |
-| 10 | Germany | 1744 | 1.4 % | 4.7 % | 11.8 % |
-| 11 | Mexico | 1722 | 1.3 % | 4.8 % | 16.8 % |
+| 1 | Argentina | 1889 | **30.1 %** | 49.0 % | 72.5 % |
+| 2 | France | 1887 | **24.6 %** | 42.2 % | 60.3 % |
+| 3 | Spain | 1856 | **14.0 %** | 25.5 % | 48.4 % |
+| 4 | England | 1848 | **12.0 %** | 23.6 % | 44.5 % |
+| 5 | USA | 1710 | 3.7 % | 9.9 % | 28.0 % |
+| 6 | Morocco | 1770 | 3.0 % | 8.5 % | 21.2 % |
+| 7 | Brazil | 1772 | 3.0 % | 8.4 % | 20.4 % |
+| 8 | Netherlands | 1764 | 2.1 % | 6.2 % | 14.8 % |
+| 9 | Portugal | 1755 | 2.0 % | 5.8 % | 15.6 % |
+| 10 | Germany | 1744 | 1.4 % | 4.8 % | 11.9 % |
+| 11 | Mexico | 1722 | 1.3 % | 4.9 % | 16.9 % |
 
 En total **34 selecciones** salieron campeonas en al menos un escenario. El detalle
 completo de las 48 (campeón / final / semi) está en [`resultados_1M.parquet`](resultados_1M.parquet).
