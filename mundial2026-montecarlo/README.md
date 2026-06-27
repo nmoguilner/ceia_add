@@ -87,18 +87,27 @@ viven en `data/sources/*.csv`; tras editarlas se regeneran los Parquet:
 uv run python convert_to_parquet.py     # data/sources/*.csv + histórico → data/*.parquet
 ```
 
-Para **actualizar** el Mundial: editá `data/sources/groups.csv` (puntos/goles), sacá de
-`fixtures.csv` los partidos ya jugados, agregalos a `played.csv` (para el backtest), y volvé a
-correr `convert_to_parquet.py`.
+Para **actualizar** el Mundial: agregá los resultados nuevos a `data/sources/played.csv` y
+corré `reconciliar.py` (reconstruye `groups.csv` y deja en `fixtures.csv` solo lo no jugado,
+manteniendo log y tabla siempre consistentes) y luego `convert_to_parquet.py`:
+
+```bash
+uv run python reconciliar.py && uv run --extra notebook python convert_to_parquet.py
+```
 
 > **Nota:** como Parquet no tiene lector en la biblioteca estándar, el motor `wcsim.py` ahora
 > depende de `pyarrow` (antes era stdlib puro). Se corre con `uv run python ...`.
 
-**Fuentes del snapshot (≈ 23-jun-2026, tras jornada 2 de grupos E-J):** tablas de [ESPN](https://www.espn.com/soccer/story/_/id/48939282/2026-fifa-world-cup-fixtures-results-match-schedule-group-stage-knockout-rounds-bracket),
+**Fuentes del snapshot (actualizado al 26-jun-2026; fases de grupo A–I completas, J/K/L pendientes):**
+tablas de [ESPN](https://www.espn.com/soccer/story/_/id/48939282/2026-fifa-world-cup-fixtures-results-match-schedule-group-stage-knockout-rounds-bracket),
 [CBS Sports](https://www.cbssports.com/soccer/news/world-cup-group-standings-table-results/) y
 [NBC Sports](https://www.nbcsports.com/soccer/news/2026-world-cup-group-stage-table-full-standings-for-all-12-groups);
 ELO de [worldfootballrankings.com](https://worldfootballrankings.com/rankings);
-bracket de [worldcuppass.com](https://worldcuppass.com/world-cup-2026-round-of-32/).
+bracket de [worldcuppass.com](https://worldcuppass.com/world-cup-2026-round-of-32/);
+histórico de [martj42/international_results](https://github.com/martj42/international_results).
+
+> **Procedencia completa** (cada dataset: origen, licencia, cobertura, datos derivados y
+> limitaciones) en **[`data/FUENTES.md`](data/FUENTES.md)**.
 
 ---
 

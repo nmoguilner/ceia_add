@@ -1,49 +1,49 @@
 group,team,played,pts,gf,ga
-A,Mexico,2,6,3,0
-A,South Korea,2,3,2,2
-A,Czechia,2,1,2,3
-A,South Africa,2,1,1,3
-B,Canada,2,4,7,1
-B,Switzerland,2,4,5,2
-B,Bosnia and Herzegovina,2,1,2,5
-B,Qatar,2,1,1,7
-C,Brazil,2,4,4,1
-C,Morocco,2,4,2,1
-C,Scotland,2,3,1,1
-C,Haiti,2,0,0,4
-D,USA,2,6,6,1
-D,Australia,2,3,2,2
-D,Paraguay,2,3,1,2
-D,Turkiye,2,0,1,5
-E,Germany,2,6,9,2
-E,Ivory Coast,2,3,2,2
-E,Ecuador,2,1,0,1
-E,Curacao,2,1,1,7
-F,Netherlands,2,4,7,3
-F,Japan,2,4,6,2
-F,Sweden,2,3,6,6
-F,Tunisia,2,0,1,9
-G,Egypt,2,4,4,2
-G,Belgium,2,2,1,1
-G,Iran,2,2,2,2
-G,New Zealand,2,1,3,5
-H,Spain,2,4,4,0
-H,Cabo Verde,2,2,2,2
-H,Uruguay,2,2,3,3
-H,Saudi Arabia,2,1,1,5
-I,France,2,6,6,1
-I,Norway,2,6,7,3
-I,Senegal,2,0,3,6
-I,Iraq,2,0,1,7
+A,Mexico,3,9,6,0
+A,South Africa,3,4,2,3
+A,South Korea,3,3,2,3
+A,Czechia,3,1,2,6
+B,Switzerland,3,7,7,3
+B,Canada,3,4,8,3
+B,Bosnia and Herzegovina,3,4,5,6
+B,Qatar,3,1,2,10
+C,Brazil,3,7,7,1
+C,Morocco,3,7,6,3
+C,Scotland,3,3,1,4
+C,Haiti,3,0,2,8
+D,USA,3,6,8,4
+D,Australia,3,4,2,2
+D,Paraguay,3,4,2,4
+D,Turkiye,3,3,3,5
+E,Germany,3,6,10,4
+E,Ivory Coast,3,6,4,2
+E,Ecuador,3,4,2,2
+E,Curacao,3,1,1,9
+F,Netherlands,3,7,10,4
+F,Japan,3,5,7,3
+F,Sweden,3,4,7,7
+F,Tunisia,3,0,2,12
+G,Belgium,3,5,6,2
+G,Egypt,3,5,5,3
+G,Iran,3,3,3,3
+G,New Zealand,3,1,4,10
+H,Spain,3,7,5,0
+H,Cabo Verde,3,3,2,2
+H,Uruguay,3,2,3,4
+H,Saudi Arabia,3,2,1,5
+I,France,3,9,10,2
+I,Norway,3,6,8,7
+I,Senegal,3,3,8,6
+I,Iraq,3,0,1,12
 J,Argentina,2,6,5,0
 J,Austria,2,3,3,3
 J,Algeria,2,3,2,4
 J,Jordan,2,0,2,5
 K,Colombia,2,6,4,1
-K,DR Congo,2,1,1,2
 K,Portugal,2,4,6,1
+K,DR Congo,2,1,1,2
 K,Uzbekistan,2,0,1,8
 L,England,2,4,4,2
 L,Ghana,2,4,1,0
-L,Panama,2,0,0,2
 L,Croatia,2,3,3,4
+L,Panama,2,0,0,2
