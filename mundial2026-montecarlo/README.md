@@ -72,7 +72,7 @@ probabilidad derivada del ELO.
 
 | archivo | contenido |
 |---------|-----------|
-| `elo.parquet`      | ELO de las 48 selecciones (escala clásica de worldfootballrankings; los sin dato público marcados `estimado`) |
+| `elo.parquet`      | ELO de las 48 selecciones (escala de worldfootballrankings; las 48 con dato real al 27-jun) |
 | `groups.parquet`   | snapshot de los 12 grupos: partidos jugados, puntos, GF, GA |
 | `fixtures.parquet` | partidos de grupo que **faltan** jugar |
 | `history.parquet`  | 49.477 partidos internacionales 1872–2026 (calibración; fuente martj42) |
@@ -269,4 +269,4 @@ desnivel grande — es exactamente lo que ataca la corrección Dixon–Coles pen
 - Goles modelados como Poisson **independientes** (sin correlación ni efecto de marcador).
 - La asignación de terceros usa un matching válido respetando los grupos admitidos,
   no la tabla FIFA exacta de 495 combinaciones (efecto de segundo orden sobre el campeón).
-- Algunos ELO de selecciones menores están **estimados** (ver columna `fuente` en `elo.parquet` / `data/sources/elo.csv`).
+- Las 48 selecciones usan ELO real de worldfootballrankings (al 27-jun ya no hay valores estimados; ver `data/FUENTES.md`), con un leve desfase de fecha entre las potencias del snapshot y las 13 actualizadas.

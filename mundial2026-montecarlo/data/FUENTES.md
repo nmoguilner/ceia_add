@@ -17,22 +17,18 @@ en `data/*.parquet`, que es lo que leen `wcsim.py`, `calibrate.py` y `elo_histor
 - **Origen:** [worldfootballrankings.com/rankings](https://worldfootballrankings.com/rankings),
   que aplica la metodología *World Football Elo Ratings* (escala clásica de
   [eloratings.net](https://eloratings.net): K variable, multiplicador por margen de gol).
-- **Obtención:** **manual** (copiado del ranking a la fecha del snapshot).
-- **Cobertura:** **35 de 48** selecciones con dato público (columna `fuente = worldfootballrankings`).
+- **Obtención:** **manual** (copiado del ranking). Las 48 selecciones tienen `fuente =
+  worldfootballrankings` (al 27-jun-2026 ya no quedan valores `estimado`).
 - **Licencia:** sitio público de rankings; sin licencia formal de redistribución. Se usa
   como referencia numérica, con atribución.
-- **Limitación — 13 ELO `estimado`** (sin dato público claro, asignados a mano; sesgan
-  sobre todo a las selecciones débiles, efecto de segundo orden sobre el campeón):
-
-  | Selección | ELO est. | | Selección | ELO est. |
-  |---|---|---|---|---|
-  | Bosnia and Herzegovina | 1500 | | Saudi Arabia | 1460 |
-  | Ghana | 1490 | | Qatar | 1450 |
-  | Tunisia | 1490 | | Iraq | 1450 |
-  | South Africa | 1480 | | Cabo Verde | 1430 |
-  | Uzbekistan | 1470 | | Jordan | 1410 |
-  | New Zealand | 1400 | | Curacao | 1330 |
-  | Haiti | 1300 | | | |
+- **Escala:** ojo, **NO** es la de eloratings.net. En worldfootballrankings Argentina ≈ 1900
+  y New Zealand ≈ 1270; en eloratings.net los mismos equipos están ~200 puntos más arriba.
+  Al actualizar ELOs hay que tomarlos **siempre de worldfootballrankings** para no mezclar escalas.
+- **Nota de consistencia temporal:** los 35 valores de las potencias son del snapshot inicial
+  (Argentina 1889); los 13 que antes eran `estimado` se reemplazaron por el valor real de
+  worldfootballrankings al 27-jun (Argentina ahí ≈ 1902). El desfase (~13 pts, uniforme) es
+  despreciable frente a la corrección, pero conviene re-bajar las 48 juntas si se quiere
+  consistencia estricta de fecha.
 
 ### 1.2 Estado del torneo — `groups.csv`, `fixtures.csv`, `played.csv`
 - **Contenido:**
@@ -108,5 +104,11 @@ martj42 (histórico) ───────────────────�
 StatsBomb (alineaciones) ─► lineups.parquet ─► [modelo de formaciones, en desarrollo]
 ```
 
-**Debilidades reconocidas:** (1) 13 ELO estimados; (2) estado del torneo cargado a mano
-desde prensa; (3) asignación de terceros simplificada vs la tabla FIFA de 495 casos.
+**Debilidades reconocidas:** (1) estado del torneo cargado a mano desde prensa;
+(2) asignación de terceros simplificada vs la tabla FIFA de 495 casos; (3) leve desfase
+temporal entre los 35 ELO del snapshot inicial y los 13 actualizados al 27-jun.
+
+> **Histórico:** hasta el 27-jun-2026, 13 selecciones de perfil bajo/debutantes tenían ELO
+> `estimado` a mano (banda 1300–1500). Se reemplazaron por los valores reales de
+> worldfootballrankings; resultaron estar mayormente inflados (p. ej. New Zealand 1400→1270,
+> Bosnia 1500→1409). Impacto sobre P(campeón) de las potencias: < 0.3 pp (segundo orden).
