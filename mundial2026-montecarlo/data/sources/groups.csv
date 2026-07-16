@@ -35,15 +35,15 @@ I,France,3,9,10,2
 I,Norway,3,6,8,7
 I,Senegal,3,3,8,6
 I,Iraq,3,0,1,12
-J,Argentina,2,6,5,0
-J,Austria,2,3,3,3
-J,Algeria,2,3,2,4
-J,Jordan,2,0,2,5
-K,Colombia,2,6,4,1
-K,Portugal,2,4,6,1
-K,DR Congo,2,1,1,2
-K,Uzbekistan,2,0,1,8
-L,England,2,4,4,2
-L,Ghana,2,4,1,0
-L,Croatia,2,3,3,4
-L,Panama,2,0,0,2
+J,Argentina,3,9,8,1
+J,Austria,3,4,6,6
+J,Algeria,3,4,5,7
+J,Jordan,3,0,3,8
+K,Colombia,3,7,4,1
+K,Portugal,3,5,6,1
+K,DR Congo,3,4,4,3
+K,Uzbekistan,3,0,2,11
+L,England,3,7,6,2
+L,Croatia,3,6,5,5
+L,Ghana,3,4,2,2
+L,Panama,3,0,0,4

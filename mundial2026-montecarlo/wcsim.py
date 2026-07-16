@@ -82,11 +82,19 @@ class MatchModel:
     """Convierte ELO -> goles esperados -> resultado simulado."""
 
     def __init__(self, elo, base=1.35, home_adv=60.0, scale=800.0,
-                 total_goals=None, maxg=15):
+                 total_goals=None, maxg=15, rho=0.0, dynamic=False):
         self.elo = elo
+        # ELO dinamico: tras cada partido (real o simulado) se actualiza el ELO
+        # de ambos equipos con la formula de World Football Elo (K=60 Mundial),
+        # de modo que la forma DENTRO del torneo entre al modelo.
+        self.dynamic = dynamic
         self.base = base          # goles esperados base por equipo
         self.home_adv = home_adv  # bonus de ELO para equipos anfitriones
         self.scale = scale        # 800 => relacion de lambdas = 10^(dELO/400)
+        # Correccion de Dixon-Coles: dependencia en marcadores bajos (0-0,1-0,
+        # 0-1,1-1). rho<0 sube la masa de empates, que dos Poisson independientes
+        # subestiman. rho=0 => Poisson independiente puro (comportamiento previo).
+        self.rho = rho
         # Modo alternativo (apendice): total de goles FIJO (total_goals) repartido
         # de modo que el puntaje esperado siga calibrado al ELO. Evita que
         # lambda_A + lambda_B explote en partidos muy desparejos. None => baseline.
@@ -156,19 +164,97 @@ class MatchModel:
         diff = self._eff_elo(a, venue) - self._eff_elo(b, venue)
         return 1.0 / (1.0 + 10.0 ** (-diff / 400.0))
 
+    def score_matrix(self, a, b, venue=None, maxg=None):
+        """Matriz conjunta P(gf_a=i, gf_b=j) con correccion de Dixon-Coles,
+        renormalizada a 1. Con rho=0 es el producto de dos Poisson."""
+        maxg = maxg or self._maxg
+        la, lb = self.lambdas(a, b, venue)
+        pa = [_pmf(i, la) for i in range(maxg)]
+        pb = [_pmf(j, lb) for j in range(maxg)]
+        M = [[pa[i] * pb[j] * _dc_tau(i, j, la, lb, self.rho) for j in range(maxg)]
+             for i in range(maxg)]
+        s = sum(M[i][j] for i in range(maxg) for j in range(maxg))
+        if s > 0:
+            M = [[v / s for v in row] for row in M]
+        return M
+
+    def _sample_score(self, a, b, rng, venue=None):
+        """Muestrea (gf_a, gf_b) de la conjunta con correccion Dixon-Coles."""
+        M = self.score_matrix(a, b, venue)
+        u = rng.random()
+        cum = 0.0
+        maxg = len(M)
+        for i in range(maxg):
+            for j in range(maxg):
+                cum += M[i][j]
+                if u <= cum:
+                    return i, j
+        return maxg - 1, maxg - 1
+
+    def update_elo(self, home, away, gh, ga, venue=None, k=60.0):
+        """Actualiza el ELO de ambos equipos tras un partido (World Football Elo).
+        Localia (+100) solo si el local es anfitrion jugando en su pais."""
+        rh, ra = self.elo.get(home, 1450.0), self.elo.get(away, 1450.0)
+        if venue is None:
+            is_home = home in HOSTS
+        else:
+            is_home = HOST_COUNTRY.get(home) == venue
+        dr = (rh + (100.0 if is_home else 0.0)) - ra
+        we = 1.0 / (1.0 + 10.0 ** (-dr / 400.0))
+        w = 1.0 if gh > ga else (0.5 if gh == ga else 0.0)
+        chg = k * _goal_mult(abs(gh - ga)) * (w - we)
+        self.elo[home] = rh + chg
+        self.elo[away] = ra - chg
+
     def play_group(self, a, b, rng):
-        la, lb = self.lambdas(a, b)
-        return _poisson(la, rng), _poisson(lb, rng)
+        if self.rho:
+            gh, ga = self._sample_score(a, b, rng)
+        else:
+            la, lb = self.lambdas(a, b)
+            gh, ga = _poisson(la, rng), _poisson(lb, rng)
+        if self.dynamic:
+            self.update_elo(a, b, gh, ga)
+        return gh, ga
 
     def play_knockout(self, a, b, rng, venue=None):
         """Devuelve el equipo ganador (empate -> penales segun ELO)."""
-        la, lb = self.lambdas(a, b, venue)
-        ga, gb = _poisson(la, rng), _poisson(lb, rng)
+        if self.rho:
+            ga, gb = self._sample_score(a, b, rng, venue)
+        else:
+            la, lb = self.lambdas(a, b, venue)
+            ga, gb = _poisson(la, rng), _poisson(lb, rng)
+        if self.dynamic:
+            self.update_elo(a, b, ga, gb, venue)
         if ga > gb:
             return a
         if gb > ga:
             return b
         return a if rng.random() < self.win_prob(a, b, venue) else b
+
+
+def _goal_mult(margin):
+    """Multiplicador por margen de gol del World Football Elo (eloratings.net)."""
+    if margin <= 1:
+        return 1.0
+    if margin == 2:
+        return 1.5
+    return (11 + margin) / 8.0
+
+
+def _dc_tau(x, y, la, lb, rho):
+    """Factor de correccion de Dixon-Coles para el marcador (x, y).
+
+    Reajusta solo las 4 celdas de marcador bajo; el resto queda en 1. Con rho<0
+    sube P(0-0) y P(1-1) (empates) a costa de P(1-0) y P(0-1)."""
+    if x == 0 and y == 0:
+        return 1.0 - la * lb * rho
+    if x == 0 and y == 1:
+        return 1.0 + la * rho
+    if x == 1 and y == 0:
+        return 1.0 + lb * rho
+    if x == 1 and y == 1:
+        return 1.0 - rho
+    return 1.0
 
 
 def _pmf(k, lam):
@@ -334,12 +420,31 @@ def simulate_knockout(standings, best_thirds, bracket, model, rng):
 # Monte Carlo
 # ---------------------------------------------------------------------------
 
+def _elo_through_snapshot(pre_elo, fixtures, data_base, model):
+    """ELO base para el modo dinamico: parte del ELO pre-Mundial y aplica el
+    update de TODOS los partidos ya incorporados a la tabla (los jugados que NO
+    estan entre los fixtures por simular), dejando el ELO al estado del snapshot."""
+    played = read_parquet(os.path.join(_data_dir(data_base), "played.parquet"))
+    pendientes = {(g, h, a) for (g, h, a) in fixtures}
+    base = dict(pre_elo)
+    model.elo = base
+    for r in sorted(played, key=lambda r: r["date"]):
+        if (r["group"], r["home"], r["away"]) in pendientes:
+            continue  # se juega en la simulacion, no va al ELO base
+        model.update_elo(r["home"], r["away"], int(r["gh"]), int(r["ga"]))
+    return base
+
+
 def run(n=20000, seed=None, base=1.35, home_adv=60.0, data_base=None, progress=None,
-        total_goals=None, scale=800.0):
+        total_goals=None, scale=800.0, rho=0.0, dynamic=False):
     data = load_all(data_base)
     model = MatchModel(data["elo"], base=base, home_adv=home_adv, scale=scale,
-                       total_goals=total_goals)
+                       total_goals=total_goals, rho=rho, dynamic=dynamic)
     rng = random.Random(seed)
+
+    base_elo = data["elo"]
+    if dynamic:
+        base_elo = _elo_through_snapshot(data["elo"], data["fixtures"], data_base, model)
 
     all_teams = list(data["elo"].keys())
     champ = {t: 0 for t in all_teams}
@@ -347,6 +452,8 @@ def run(n=20000, seed=None, base=1.35, home_adv=60.0, data_base=None, progress=N
     semi = {t: 0 for t in all_teams}
 
     for i in range(n):
+        if dynamic:
+            model.elo = dict(base_elo)   # cada torneo arranca del snapshot y evoluciona aparte
         standings, best_thirds = simulate_group_stage(
             data["groups"], data["fixtures"], model, rng)
         champion, finalists, semifinalists = simulate_knockout(

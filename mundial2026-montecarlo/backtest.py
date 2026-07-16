@@ -26,14 +26,34 @@ def load_played(path):
 
 
 def wdl(model, home, away, maxg=16):
-    """P(home), P(empate), P(away) analitico bajo dos Poisson(la), Poisson(lb)."""
+    """P(home), P(empate), P(away) analitico bajo dos Poisson(la), Poisson(lb)
+    con la correccion de Dixon-Coles (rho del modelo; rho=0 => Poisson puro)."""
     la, lb = model.lambdas(home, away)
+    rho = getattr(model, "rho", 0.0)
     pa = [math.exp(-la) * la ** k / math.factorial(k) for k in range(maxg)]
     pb = [math.exp(-lb) * lb ** k / math.factorial(k) for k in range(maxg)]
-    p_h = sum(pa[i] * pb[j] for i in range(maxg) for j in range(maxg) if i > j)
-    p_d = sum(pa[i] * pb[i] for i in range(maxg))
-    p_a = sum(pa[i] * pb[j] for i in range(maxg) for j in range(maxg) if i < j)
+    P = [[pa[i] * pb[j] * _tau(i, j, la, lb, rho) for j in range(maxg)]
+         for i in range(maxg)]
+    s = sum(P[i][j] for i in range(maxg) for j in range(maxg))
+    p_h = sum(P[i][j] for i in range(maxg) for j in range(maxg) if i > j) / s
+    p_d = sum(P[i][i] for i in range(maxg)) / s
+    p_a = sum(P[i][j] for i in range(maxg) for j in range(maxg) if i < j) / s
     return p_h, p_d, p_a
+
+
+def _tau(x, y, la, lb, rho):
+    """Factor de Dixon-Coles para marcadores bajos (igual que wcsim._dc_tau)."""
+    if rho == 0.0:
+        return 1.0
+    if x == 0 and y == 0:
+        return 1.0 - la * lb * rho
+    if x == 0 and y == 1:
+        return 1.0 + la * rho
+    if x == 1 and y == 0:
+        return 1.0 + lb * rho
+    if x == 1 and y == 1:
+        return 1.0 - rho
+    return 1.0
 
 
 def matchday(group, date):
@@ -47,7 +67,8 @@ def build_model(calibrated):
     if calibrated:
         with open(os.path.join(_data_dir(), "calibration.json")) as f:
             cal = json.load(f)
-        return MatchModel(elo, base=cal["mu"], home_adv=cal["home_adv_elo"], scale=cal["escala"])
+        return MatchModel(elo, base=cal["mu"], home_adv=cal["home_adv_elo"],
+                          scale=cal["escala"], rho=cal.get("rho", 0.0))
     return MatchModel(elo, base=1.35, home_adv=60.0, scale=800.0)
 
 
@@ -71,6 +92,46 @@ def evaluate(rows_played, model):
             "pred": pred, "correct": pred == outcome,
             "brier": brier, "logl": logl, "md": matchday(g, date),
         })
+    return rows
+
+
+def evaluate_dynamic(rows_played, model, k=60.0):
+    """Igual que evaluate() pero con ELO DINAMICO: recorre los partidos en orden
+    cronologico, predice cada uno con el ELO vigente y luego actualiza el ELO de
+    ambos equipos con la formula de World Football Elo (la misma de elo_history).
+    Asi la prediccion de la fecha N incorpora lo visto en las fechas previas."""
+    from elo_history import goal_mult
+    from wcsim import HOSTS
+
+    elo = dict(model.elo)          # copia mutable; no toca el ELO compartido
+    model.elo = elo
+    rows = []
+    for date, g, home, away, gh, gg in sorted(rows_played):
+        p_h, p_d, p_a = wdl(model, home, away)
+        if gh > gg:
+            outcome, p_actual, obs = "H", p_h, (1, 0, 0)
+        elif gg > gh:
+            outcome, p_actual, obs = "A", p_a, (0, 0, 1)
+        else:
+            outcome, p_actual, obs = "D", p_d, (0, 1, 0)
+        brier = sum((p - o) ** 2 for p, o in zip((p_h, p_d, p_a), obs))
+        logl = -math.log(max(p_actual, 1e-9))
+        pred = max(["H", "D", "A"], key=lambda x: {"H": p_h, "D": p_d, "A": p_a}[x])
+        rows.append({
+            "date": date, "g": g, "home": home, "away": away,
+            "gh": gh, "gg": gg, "outcome": outcome,
+            "p_h": p_h, "p_d": p_d, "p_a": p_a,
+            "pred": pred, "correct": pred == outcome,
+            "brier": brier, "logl": logl, "md": matchday(g, date),
+        })
+        # actualizacion ELO post-partido (localia 100 solo si el local es anfitrion)
+        rh, ra = elo.get(home, 1450.0), elo.get(away, 1450.0)
+        dr = (rh + (100.0 if home in HOSTS else 0.0)) - ra
+        we = 1.0 / (1.0 + 10.0 ** (-dr / 400.0))
+        w = 1.0 if gh > gg else (0.5 if gh == gg else 0.0)
+        chg = k * goal_mult(abs(gh - gg)) * (w - we)
+        elo[home] = rh + chg
+        elo[away] = ra - chg
     return rows
 
 

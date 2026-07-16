@@ -26,23 +26,38 @@ def main():
                     help="variante: total de goles FIJO por partido (calibrado al ELO); ver Apendice A")
     ap.add_argument("--calibrated", action="store_true",
                     help="usa los parametros estimados por MLE (data/calibration.json); ver Apendice B")
+    ap.add_argument("--rho", type=float, default=None,
+                    help="correccion Dixon-Coles (default: el de calibration.json si --calibrated)")
+    ap.add_argument("--dynamic-elo", action="store_true",
+                    help="ELO dinamico: se actualiza tras cada partido (real y simulado)")
     ap.add_argument("--out", type=str, default=None, help="ruta CSV para volcar todos los resultados")
     ap.add_argument("--top", type=int, default=20, help="cuantas selecciones mostrar en pantalla")
     args = ap.parse_args()
 
-    base, home_adv, scale = args.base, args.home_adv, 800.0
+    base, home_adv, scale, rho = args.base, args.home_adv, 800.0, 0.0
     if args.calibrated:
         import json
         here = os.path.dirname(os.path.abspath(__file__))
         cal = json.load(open(os.path.join(here, "data", "calibration.json"), encoding="utf-8"))
         base, scale, home_adv = cal["mu"], cal["escala"], cal["home_adv_elo"]
+        rho = cal.get("rho", 0.0)
+    if args.rho is not None:
+        rho = args.rho
 
+    extras = []
+    if args.calibrated:
+        extras.append("MLE")
+    if rho:
+        extras.append(f"DC rho={rho:+.3f}")
+    if args.dynamic_elo:
+        extras.append("ELO dinamico")
     print(f"Simulando {args.num:,} escenarios del Mundial 2026 "
           f"(seed={args.seed}, base={base:.3f}, escala={scale:.0f}, localia=+{home_adv:.0f} ELO"
-          f"{', MLE' if args.calibrated else ''})...")
+          f"{', ' + ', '.join(extras) if extras else ''})...")
     results, n = wcsim.run(
         n=args.num, seed=args.seed, base=base, home_adv=home_adv, scale=scale,
         total_goals=args.total_goals, progress=max(args.num // 10, 1),
+        rho=rho, dynamic=args.dynamic_elo,
     )
 
     champs = [r for r in results if r["titles"] > 0]

@@ -93,6 +93,72 @@ def loglik(X, y, beta):
     return float(np.sum(y * np.log(lam) - lam - np.array([lgamma(v + 1) for v in y])))
 
 
+def construir_pares(filas, elo, beta):
+    """(la, lb, gh, ga) por partido con los lambda del modelo ya ajustado.
+    Necesario para Dixon-Coles, que depende del marcador CONJUNTO (no separable)."""
+    b0, b1, b2 = beta
+    pares = []
+    for r in filas:
+        if r["date"] < DESDE:
+            continue
+        if r["home_score"] is None or r["away_score"] is None:
+            continue
+        h = ALIAS.get(r["home_team"], r["home_team"])
+        a = ALIAS.get(r["away_team"], r["away_team"])
+        if h not in elo or a not in elo:
+            continue
+        gh, ga = int(r["home_score"]), int(r["away_score"])
+        d = elo[h] - elo[a]
+        local_h = 0.0 if bool(r["neutral"]) else 1.0
+        la = float(np.exp(b0 + b1 * d + b2 * local_h))
+        lb = float(np.exp(b0 - b1 * d))
+        pares.append((la, lb, gh, ga))
+    return pares
+
+
+def _tau(x, y, la, lb, rho):
+    if x == 0 and y == 0:
+        return 1.0 - la * lb * rho
+    if x == 0 and y == 1:
+        return 1.0 + la * rho
+    if x == 1 and y == 0:
+        return 1.0 + lb * rho
+    if x == 1 and y == 1:
+        return 1.0 - rho
+    return 1.0
+
+
+def loglik_rho(pares, rho):
+    """Log-verosimilitud que aporta rho: solo el termino tau (lo demas es cte).
+    Maximizarla equivale al estimador Dixon-Coles de 2 etapas (lambda fijos)."""
+    s = 0.0
+    for la, lb, gh, ga in pares:
+        t = _tau(gh, ga, la, lb, rho)
+        if t <= 0.0:
+            return -1e18
+        s += np.log(t)
+    return s
+
+
+def estimar_rho(pares, lo=-0.4, hi=0.4):
+    """Maximiza loglik_rho por busqueda de la seccion aurea en [lo, hi]."""
+    import math
+    gr = (math.sqrt(5.0) - 1.0) / 2.0
+    c, d = hi - gr * (hi - lo), lo + gr * (hi - lo)
+    fc, fd = loglik_rho(pares, c), loglik_rho(pares, d)
+    for _ in range(200):
+        if fc > fd:
+            hi, d, fd = d, c, fc
+            c = hi - gr * (hi - lo); fc = loglik_rho(pares, c)
+        else:
+            lo, c, fc = c, d, fd
+            d = lo + gr * (hi - lo); fd = loglik_rho(pares, d)
+        if hi - lo < 1e-7:
+            break
+    rho = 0.5 * (lo + hi)
+    return rho, loglik_rho(pares, rho)
+
+
 def main():
     elo = wcsim.load_all()["elo"]
     filas = cargar_historico()
@@ -117,7 +183,16 @@ def main():
     print(f"  escala  = {escala:.1f}   (paper: 800 fijado a mano)")
     print(f"  h (ELO) = {h_elo:.1f}   (paper: 60 fijado a mano)")
 
+    # --- Segunda etapa: dependencia de marcadores bajos (Dixon-Coles) ---
+    pares = construir_pares(filas, elo, beta)
+    rho, gain = estimar_rho(pares)
+    print("\n=== Dixon-Coles (2da etapa, lambda fijos) ===")
+    print(f"  rho     = {rho:+.4f}   (rho<0 => sube la masa de empates)")
+    print(f"  ganancia logLik sobre el historico (n={len(pares)}): +{gain:.1f}")
+
     out = {
+        "rho": rho,
+        "rho_loglik_gain": gain,
         "fuente": "data/history.parquet (martj42/international_results)",
         "desde": DESDE,
         "n_partidos": n_part,

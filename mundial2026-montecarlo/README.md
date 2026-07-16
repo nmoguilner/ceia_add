@@ -76,7 +76,8 @@ probabilidad derivada del ELO.
 | `groups.parquet`   | snapshot de los 12 grupos: partidos jugados, puntos, GF, GA |
 | `fixtures.parquet` | partidos de grupo que **faltan** jugar |
 | `history.parquet`  | 49.477 partidos internacionales 1872–2026 (calibración; fuente martj42) |
-| `played.parquet`   | partidos del Mundial 2026 ya disputados (backtest, Apéndice D) |
+| `played.parquet`   | partidos de GRUPOS del Mundial 2026 ya disputados (backtest, Apéndice D) |
+| `knockout_played.parquet` | eliminatorias ya disputadas (M73–M100): marcador final (90' o 120') y penales |
 | `bracket.json`     | plantilla oficial de la Ronda de 32 y el árbol hasta la final |
 | `calibration*.json` | parámetros estimados (Apéndices B y C) |
 
@@ -98,7 +99,7 @@ uv run python reconciliar.py && uv run --extra notebook python convert_to_parque
 > **Nota:** como Parquet no tiene lector en la biblioteca estándar, el motor `wcsim.py` ahora
 > depende de `pyarrow` (antes era stdlib puro). Se corre con `uv run python ...`.
 
-**Fuentes del snapshot (actualizado al 26-jun-2026; fases de grupo A–I completas, J/K/L pendientes):**
+**Fuentes del snapshot (actualizado al 13-jul-2026; grupos completos y eliminatorias jugadas hasta cuartos — ver `knockout_played`):**
 tablas de [ESPN](https://www.espn.com/soccer/story/_/id/48939282/2026-fifa-world-cup-fixtures-results-match-schedule-group-stage-knockout-rounds-bracket),
 [CBS Sports](https://www.cbssports.com/soccer/news/world-cup-group-standings-table-results/) y
 [NBC Sports](https://www.nbcsports.com/soccer/news/2026-world-cup-group-stage-table-full-standings-for-all-12-groups);
@@ -135,6 +136,45 @@ La columna `P(semi)` deja a la vista que la **grilla de eliminatorias completa**
 > **Localía geográfica:** la ventaja de sede solo se aplica cuando un anfitrión juega en su
 > país. Por eso México (local en R32/octavos pero no en las rondas finales, todas en EE. UU.)
 > llega seguido a instancias intermedias —P(semi) ≈ 16 %— pero su P(campeón) cae a ~1.3 %.
+
+---
+
+## Actualización al 13-jul-2026 — pronóstico condicionado al torneo real (`pronostico.py`)
+
+Con la fase de grupos completa (72 partidos) y las eliminatorias jugadas hasta cuartos
+(28 partidos en `data/sources/knockout_played.csv`), quedan las semis **M101 Francia–España**
+y **M102 Inglaterra–Argentina** (14/15-jul) y la final M103 (19-jul). Los 4 semifinalistas
+reales son **exactamente los 4 favoritos del modelo** desde el arranque.
+
+```bash
+uv run python pronostico.py     # P(final)/P(campeón) de los 4 + backtest de eliminatorias
+```
+
+Como restan solo 3 partidos, `pronostico.py` calcula P(campeón) en forma **analítica**
+(exacta bajo el modelo; validada contra MC de 200k). Con el modelo calibrado (Ap. B) y el
+**ELO dinámico** (evolucionado con los 100 resultados reales del torneo, World Football Elo K=60):
+
+| Selección | ELO (27-jun → 13-jul) | P(final) | P(campeón) |
+|---|---|---:|---:|
+| Francia | 1887 → 1974 | 58.3 % | **32.6 %** |
+| Argentina | 1889 → 1953 | 56.6 % | **28.5 %** |
+| España | 1856 → 1919 | 41.7 % | 19.9 % |
+| Inglaterra | 1848 → 1909 | 43.4 % | 19.0 % |
+
+Con ELO estático el orden se invierte (Argentina 29.5 %, Francia 28.7 %): la diferencia la
+hace la **forma dentro del torneo** (Francia +87 pts de ELO, la mejor campaña).
+
+**Backtest de eliminatorias** (P(avanzar) del ganador real, 2 vías, 28 partidos): acierto
+**82.1 %**, Brier 0.14–0.15 en las tres variantes (referencia 50/50: Brier 0.25). Sobre los
+**72 partidos de grupos** el calibrado da Brier 0.483 / logLoss 0.820 (vs 0.637/1.057 de la
+frecuencia base). Las grandes sorpresas de la llave fueron Paraguay–Alemania (P=24.6 %) y
+Noruega–Brasil (P=26.6 %); el resto de los cruces salió del lado más probable.
+
+> **Fix del bracket (13-jul):** el árbol de `bracket.json` tenía permutados los cuartos
+> M98↔M99 (las semis quedaban W89/90–W91/92 y W93/94–W95/96). Contrastado con el bracket
+> real (semis Francia–España y Argentina–Inglaterra), lo correcto es **M98 = W93 vs W94** y
+> **M99 = W91 vs W92**. Corregido; afecta de segundo orden a los números históricos del paper
+> (solo el emparejamiento de semis en adelante).
 
 ---
 

@@ -49,6 +49,16 @@ def convertir_fuentes():
         for c in ["gh", "ga"]:
             p[c] = p[c].astype("int64")
         _write(p, "played.parquet")
+    # knockout_played (eliminatorias ya disputadas; gh/ga = marcador final 90' o 120',
+    # pen_h/pen_a solo si hubo definicion por penales)
+    ko_csv = os.path.join(SRC, "knockout_played.csv")
+    if os.path.exists(ko_csv):
+        k = pd.read_csv(ko_csv)
+        for c in ["match", "gh", "ga"]:
+            k[c] = k[c].astype("int64")
+        for c in ["pen_h", "pen_a"]:
+            k[c] = k[c].astype("Int64")
+        _write(k, "knockout_played.parquet")
 
 
 def convertir_historico():

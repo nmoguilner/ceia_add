@@ -1,4 +1,6 @@
 {
+  "rho": -0.1683840431974086,
+  "rho_loglik_gain": 3.9960512287539047,
   "fuente": "data/history.parquet (martj42/international_results)",
   "desde": "2023-01-01",
   "n_partidos": 435,

@@ -72,7 +72,8 @@ def reconstruir(filas):
     """Pasada forward. Devuelve (ratings_finales, muestras_prepartido)."""
     R = defaultdict(lambda: 1500.0)
     filas = sorted(filas, key=lambda r: r["date"])
-    muestras = []  # (date, R_home_pre, R_away_pre, neutral, gh, ga)
+    # (date, home, away, R_home_pre, R_away_pre, neutral, gh, ga, tournament)
+    muestras = []
     for r in filas:
         if r["home_score"] is None or r["away_score"] is None:
             continue
@@ -80,7 +81,7 @@ def reconstruir(filas):
         h, a = r["home_team"], r["away_team"]
         neutral = bool(r["neutral"])
         rh, ra = R[h], R[a]
-        muestras.append((r["date"], rh, ra, neutral, gh, ga))
+        muestras.append((r["date"], h, a, rh, ra, neutral, gh, ga, r["tournament"]))
         # actualizacion ELO
         dr = (rh + (0 if neutral else 100)) - ra
         we = 1.0 / (1.0 + 10.0 ** (-dr / 400.0))
@@ -91,6 +92,25 @@ def reconstruir(filas):
     return R, muestras
 
 
+def escribir_prematch(muestras, path):
+    """Vuelca la serie de ELO PRE-PARTIDO de cada partido jugado del historico
+    (una fila por partido). Es la entrada del TP de Aprendizaje de Maquina:
+    featurize.py la une con history.parquet (mismos nombres martj42) para armar
+    la tabla de entrenamiento sin fuga temporal."""
+    cols = {
+        "date":         [m[0] for m in muestras],
+        "home_team":    [m[1] for m in muestras],
+        "away_team":    [m[2] for m in muestras],
+        "elo_home_pre": [round(m[3], 2) for m in muestras],
+        "elo_away_pre": [round(m[4], 2) for m in muestras],
+        "neutral":      [bool(m[5]) for m in muestras],
+        "home_score":   [int(m[6]) for m in muestras],
+        "away_score":   [int(m[7]) for m in muestras],
+        "tournament":   [m[8] for m in muestras],
+    }
+    pq.write_table(pa.table(cols), path)
+
+
 def main():
     elo_actual = wcsim.load_all()["elo"]
     filas = cargar_historico()
@@ -99,6 +119,11 @@ def main():
 
     # --- 1) ELO reconstruido de las 48 selecciones (pre-Mundial) ---
     here = os.path.dirname(os.path.abspath(__file__))
+
+    # --- 1b) Serie de ELO pre-partido de TODO el historico (insumo del TP ML) ---
+    prematch_path = os.path.join(here, "data", "elo_prematch.parquet")
+    escribir_prematch(muestras, prematch_path)
+    print(f"  Serie ELO pre-partido -> data/elo_prematch.parquet  ({len(muestras)} filas)")
     rec_rows, faltan = [], []
     corr_pairs = []
     for team in elo_actual:                       # las 48 del torneo
@@ -119,7 +144,7 @@ def main():
 
     # --- 2) Recalibracion MLE con ELO PRE-PARTIDO (sin proxy), ventana >= DESDE ---
     X, y, npart = [], [], 0
-    for date, rh, ra, neutral, gh, ga in muestras:
+    for date, _h, _a, rh, ra, neutral, gh, ga, _tour in muestras:
         if date < DESDE:
             continue
         d = rh - ra
