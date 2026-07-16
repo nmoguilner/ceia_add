@@ -245,7 +245,7 @@ Avance incremental: tras la Clase 5 (ensambles) el trabajo ya puede cerrarse; ca
 
 ---
 
-## 18. Anexo — Especificación para Claude Code (ejecución)
+## 18. Anexo — Especificación de ejecución (módulos a construir)
 
 Módulos a construir (el motor `wcsim.py` ya expone `MatchModel` como punto de inyección):
 
@@ -255,4 +255,4 @@ Módulos a construir (el motor `wcsim.py` ya expone `MatchModel` como punto de i
 - **`MLMatchModel`** (en módulo nuevo) — implementa el **contrato real** de §12: `play_group(a,b,rng) → (gh,ga)` (con muestreador de marcador), `play_knockout(a,b,rng,venue) → ganador`, y atributo `.elo` para los desempates del simulador; incluye la cascada de §12.1. **Estático con tabla precomputada** de `P(H/D/A)` y de marcador por cruce (§12, performance).
 - **`evaluate.py` / notebook** — corre ELO (baseline calibrado, §8) y ML **sobre las mismas filas del test = Mundial 2026**; métricas técnicas, calibración, ablación, y comparación de `P(campeón)` ML vs ELO vs referencia de mercado (con snapshot de fecha alineada, §11).
 
-**Reglas operativas:** las features se calculan sin fuga temporal; escalador ajustado solo con train; baseline ELO re-evaluado sobre el test (no se reusa el 0.502 del backtest del torneo); nada de redes neuronales; el sandbox no escribe sobre `.git` — commits/push se delegan al entorno del usuario.
+**Reglas operativas:** las features se calculan sin fuga temporal; escalador ajustado solo con train; baseline ELO re-evaluado sobre el test (no se reusa el 0.502 del backtest del torneo); nada de redes neuronales.

@@ -6,3 +6,9 @@ __pycache__/
 *.egg-info/
 # Material con copyright, por materia (p. ej. libros)
 **/referencias/
+
+# macOS
+.DS_Store
+
+# Comprimidos / temporales
+*.zip

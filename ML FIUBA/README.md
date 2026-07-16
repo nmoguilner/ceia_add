@@ -18,7 +18,7 @@ Variables clave (códigos EPH): `CH04` sexo · `CH06` edad · `ESTADO` condició
 actividad · `NIVEL_ED` nivel educativo · `P21` ingreso de la ocupación principal ·
 `PONDERA`/`PONDIIO` ponderadores · `REGION` geografía.
 
-Decisiones metodológicas (ver `CLAUDE.md` para el detalle): ponderadores siempre,
+Decisiones metodológicas (detalladas en la sección 3 del notebook): ponderadores siempre,
 ingreso **relativo** a la mediana del trimestre (elimina la inflación 2016–2024),
 y sin fuga de información en la clasificación de empleo.
 
