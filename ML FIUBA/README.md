@@ -4,10 +4,15 @@ Trabajo final de la cursada de **Aprendizaje de Máquina (AdM)** — CEIA, FIUBA
 
 ## Objetivo e hipótesis
 Medir la penalización por **edad** y **sexo** en el mercado laboral argentino,
-con foco en la franja cercana a la edad jubilatoria (mujeres 60 / varones 65).
-Hipótesis: a igual calificación, a partir de ~55-58 años caen fuertemente la
-probabilidad de estar ocupado y el ingreso laboral, y el golpe es más temprano y
-profundo en las mujeres.
+con foco en la franja cercana a la edad jubilatoria (mujeres 60 / varones 65),
+cuidando **no mezclar** ambas dimensiones ni atribuir al mercado lo que explica
+la norma previsional. Hipótesis en dos partes: (**H1**) la penalización etaria
+golpea a ambos sexos y, comparada a igual distancia de la jubilación propia y
+entre quienes participan del mercado, es **igual o mayor en los varones**;
+(**H2**) la brecha de empleo por sexo es ante todo una brecha de
+**participación** (oferta: cuidados, hogar, transferencias, regímenes
+especiales), más un castigo de **ingresos** entre ocupados que la composición
+observable no explica.
 
 ## Dataset
 Microdatos de la **EPH (INDEC)**, base individual, **2016–2024** (35 trimestres,
@@ -87,7 +92,7 @@ uv run --group data python -m src.data.descargar_eph --desde 2016 --hasta 2024
 # 2. EDA de brechas por edad y sexo + base analítica (eph_analitico.parquet)
 uv run python -m src.data.eda_eph
 
-# 3. Curvas de empleo e inactividad (expulsión del mercado a los 58+)
+# 3. Curvas de empleo e inactividad (la salida del mercado antes de la jubilación)
 uv run python -m src.data.empleo_curvas
 
 # 4a. Modelo de INGRESO (regresión): preparar dataset
