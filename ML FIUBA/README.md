@@ -1,6 +1,8 @@
 # ML FIUBA — Penalización por edad y sexo en el mercado laboral argentino
 
-Trabajo final de la cursada de **Aprendizaje de Máquina (AdM)** — CEIA, FIUBA.
+Trabajo final de la asignatura **Aprendizaje de Máquina** — Carrera de
+Especialización en Inteligencia Artificial (CEIA), Facultad de Ingeniería,
+Universidad de Buenos Aires.
 
 ## Objetivo e hipótesis
 Medir la penalización por **edad** y **sexo** en el mercado laboral argentino,
