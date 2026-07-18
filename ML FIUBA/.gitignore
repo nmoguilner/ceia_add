@@ -1,0 +1,25 @@
+# Datos
+data/raw/*
+data/processed/*
+data/external/*
+!data/**/.gitkeep
+
+# Modelos
+models/*
+!models/.gitkeep
+
+# Cache de descarga de pyeph (zips crudos de INDEC)
+pyeph/
+
+# Python
+__pycache__/
+*.py[cod]
+.ipynb_checkpoints/
+.venv/
+venv/
+env/
+
+# SO / editores
+.DS_Store
+.vscode/
+.idea/

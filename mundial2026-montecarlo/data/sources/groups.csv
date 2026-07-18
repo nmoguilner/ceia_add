@@ -1,0 +1,49 @@
+group,team,played,pts,gf,ga
+A,Mexico,3,9,6,0
+A,South Africa,3,4,2,3
+A,South Korea,3,3,2,3
+A,Czechia,3,1,2,6
+B,Switzerland,3,7,7,3
+B,Canada,3,4,8,3
+B,Bosnia and Herzegovina,3,4,5,6
+B,Qatar,3,1,2,10
+C,Brazil,3,7,7,1
+C,Morocco,3,7,6,3
+C,Scotland,3,3,1,4
+C,Haiti,3,0,2,8
+D,USA,3,6,8,4
+D,Australia,3,4,2,2
+D,Paraguay,3,4,2,4
+D,Turkiye,3,3,3,5
+E,Germany,3,6,10,4
+E,Ivory Coast,3,6,4,2
+E,Ecuador,3,4,2,2
+E,Curacao,3,1,1,9
+F,Netherlands,3,7,10,4
+F,Japan,3,5,7,3
+F,Sweden,3,4,7,7
+F,Tunisia,3,0,2,12
+G,Belgium,3,5,6,2
+G,Egypt,3,5,5,3
+G,Iran,3,3,3,3
+G,New Zealand,3,1,4,10
+H,Spain,3,7,5,0
+H,Cabo Verde,3,3,2,2
+H,Uruguay,3,2,3,4
+H,Saudi Arabia,3,2,1,5
+I,France,3,9,10,2
+I,Norway,3,6,8,7
+I,Senegal,3,3,8,6
+I,Iraq,3,0,1,12
+J,Argentina,3,9,8,1
+J,Austria,3,4,6,6
+J,Algeria,3,4,5,7
+J,Jordan,3,0,3,8
+K,Colombia,3,7,4,1
+K,Portugal,3,5,6,1
+K,DR Congo,3,4,4,3
+K,Uzbekistan,3,0,2,11
+L,England,3,7,6,2
+L,Croatia,3,6,5,5
+L,Ghana,3,4,2,2
+L,Panama,3,0,0,4

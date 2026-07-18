@@ -1,0 +1,21 @@
+# Configuración del experimento
+seed: 42
+
+# Tipo de problema: classification | regression
+task: regression
+
+data:
+  raw_path: data/processed/eph_modelo.csv   # EPH 2016-2024: ingreso laboral relativo
+  processed_path: data/processed/dataset.parquet
+  target: target                            # ingreso relativo a la mediana del trimestre
+  test_size: 0.2
+  drop_cols: []
+
+model:
+  # classification: logistic_regression | random_forest | knn | svm | gradient_boosting
+  # regression:     linear_regression | random_forest | knn | svm | gradient_boosting
+  type: gradient_boosting
+  params:
+    n_estimators: 300
+    max_depth: null
+  output_path: models/model.joblib
